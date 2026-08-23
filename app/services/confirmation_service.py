@@ -12,28 +12,33 @@ def confirm_appointment(
     service_request_id: int,
     service_name: str,
 ) -> Appointment:
-    appointment = create_appointment(
-        db=db,
-        service_request_id=service_request_id,
-        technician_id=option.technician_id,
-        service_name=service_name,
-        appointment_date=option.appointment_date,
-        start_time=option.start_time,
-        end_time=option.end_time,
-    )
-
-    service_request = db.scalar(
-        select(ServiceRequest).where(
-            ServiceRequest.id == service_request_id
+    try:
+        appointment = create_appointment(
+            db=db,
+            service_request_id=service_request_id,
+            technician_id=option.technician_id,
+            service_name=service_name,
+            appointment_date=option.appointment_date,
+            start_time=option.start_time,
+            end_time=option.end_time,
         )
-    )
 
-    if service_request is None:
-        raise ValueError("Service request not found.")
+        service_request = db.scalar(
+            select(ServiceRequest).where(
+                ServiceRequest.id == service_request_id
+            )
+        )
 
-    service_request.status = RequestStatus.CONFIRMED
+        if service_request is None:
+            raise ValueError("Service request not found.")
 
-    db.commit()
-    db.refresh(appointment)
+        service_request.status = RequestStatus.CONFIRMED
 
-    return appointment
+        db.commit()
+        db.refresh(appointment)
+
+        return appointment
+
+    except Exception:
+        db.rollback()
+        raise

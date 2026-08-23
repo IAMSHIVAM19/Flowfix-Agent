@@ -120,7 +120,7 @@ def create_appointment(
     )
 
     db.add(appointment)
-    db.commit()
+    db.flush()
     db.refresh(appointment)
 
     return appointment
