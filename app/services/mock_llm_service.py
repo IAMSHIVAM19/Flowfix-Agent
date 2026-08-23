@@ -64,3 +64,13 @@ def mock_extract_test_date_request() -> RequestExtraction:
         preferred_weekday="Friday",
         preferred_time="afternoon",
     )
+
+def mock_extract_toilet_request() -> RequestExtraction:
+    return RequestExtraction(
+        issue="blocked toilet",
+        service="toilet repair",
+        urgency="normal",
+        preferred_date="2026-08-27",
+        preferred_weekday="Thursday",
+        preferred_time="afternoon",
+    )

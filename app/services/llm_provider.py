@@ -10,6 +10,7 @@ from .mock_llm_service import (
     mock_extract_incomplete_request,
     mock_extract_unsupported_service,
     mock_extract_test_date_request,
+    mock_extract_toilet_request,
 )
 
 
@@ -20,12 +21,17 @@ def get_extraction(
     message: str,
     current_date: date,
 ) -> RequestExtraction:
-    provider = os.getenv("LLM_PROVIDER", "mock").lower()
-    llm_enabled = os.getenv("LLM_ENABLED", "false").lower() == "true"
+    provider = os.getenv("LLM_PROVIDER", "mock").strip().lower()
+    llm_enabled = (
+        os.getenv("LLM_ENABLED", "false").strip().lower() == "true"
+    )
 
     # Safety default: do not make a real LLM call unless explicitly enabled.
     if not llm_enabled:
-        scenario = os.getenv("MOCK_LLM_SCENARIO", "complete").lower()
+        scenario = os.getenv(
+            "MOCK_LLM_SCENARIO",
+            "complete",
+        ).strip().lower()
 
         if scenario == "complete":
             return mock_extract_complete_request()
@@ -38,6 +44,9 @@ def get_extraction(
 
         if scenario == "test_date":
             return mock_extract_test_date_request()
+
+        if scenario == "toilet":
+            return mock_extract_toilet_request()
 
         raise ValueError(
             f"Unsupported MOCK_LLM_SCENARIO: {scenario}"
