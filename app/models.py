@@ -8,6 +8,7 @@ class RequestStatus(str, Enum):
     AWAITING_CUSTOMER_CONFIRMATION = "awaiting_customer_confirmation"
     AWAITING_INFORMATION = "awaiting_information"
     AWAITING_APPOINTMENT_SELECTION = "awaiting_appointment_selection"
+    NO_AVAILABILITY = "no_availability"
     CONFIRMED = "confirmed"
 
 

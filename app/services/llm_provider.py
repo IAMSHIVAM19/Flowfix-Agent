@@ -9,6 +9,7 @@ from .mock_llm_service import (
     mock_extract_complete_request,
     mock_extract_incomplete_request,
     mock_extract_unsupported_service,
+    mock_extract_test_date_request,
 )
 
 
@@ -34,6 +35,9 @@ def get_extraction(
 
         if scenario == "unsupported":
             return mock_extract_unsupported_service()
+
+        if scenario == "test_date":
+            return mock_extract_test_date_request()
 
         raise ValueError(
             f"Unsupported MOCK_LLM_SCENARIO: {scenario}"

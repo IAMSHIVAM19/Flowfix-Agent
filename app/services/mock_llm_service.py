@@ -54,3 +54,13 @@ def mock_extract_inconsistent_date() -> RequestExtraction:
         preferred_weekday="Thursday",
         preferred_time="afternoon",
     )
+
+def mock_extract_test_date_request() -> RequestExtraction:
+    return RequestExtraction(
+        issue="leaking kitchen tap",
+        service="tap repair",
+        urgency="normal",
+        preferred_date="2026-08-28",
+        preferred_weekday="Friday",
+        preferred_time="afternoon",
+    )

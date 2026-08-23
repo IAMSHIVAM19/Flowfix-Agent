@@ -57,15 +57,29 @@ def create_request(
         current_date=date.today(),
     )
 
+    # Create the request immediately so every recognized request
+    # has a real database record and request_id.
+    service_request = create_service_request(
+        db=db,
+        message=request.message,
+        customer_id=customer.id,
+        status=RequestStatus.RECEIVED,
+        extraction=extraction,
+    )
+
     extraction_result = process_extraction(
         extraction=extraction,
         db=db,
     )
 
     if extraction_result.status == "needs_clarification":
+        service_request.status = RequestStatus.AWAITING_INFORMATION
+        db.commit()
+        db.refresh(service_request)
+
         return {
-            "request_id": str(uuid.uuid4()),
-            "status": RequestStatus.AWAITING_INFORMATION,
+            "request_id": service_request.request_id,
+            "status": service_request.status,
             "message": extraction_result.message,
             "appointment_options": [],
         }
@@ -76,20 +90,20 @@ def create_request(
     )
 
     if scheduling_result.status == "no_availability":
+        service_request.status = RequestStatus.NO_AVAILABILITY
+        db.commit()
+        db.refresh(service_request)
+
         return {
-            "request_id": str(uuid.uuid4()),
-            "status": RequestStatus.RECEIVED,
+            "request_id": service_request.request_id,
+            "status": service_request.status,
             "message": scheduling_result.message,
             "appointment_options": [],
         }
 
-    service_request = create_service_request(
-        db=db,
-        message=request.message,
-        customer_id=customer.id,
-        status=RequestStatus.AWAITING_APPOINTMENT_SELECTION,
-        extraction=extraction_result.extraction,
-    )
+    service_request.status = RequestStatus.AWAITING_APPOINTMENT_SELECTION
+    db.commit()
+    db.refresh(service_request)
 
     return {
         "request_id": service_request.request_id,
