@@ -1,5 +1,5 @@
 from enum import Enum
-
+import uuid
 from pydantic import BaseModel, Field
 
 
@@ -7,6 +7,8 @@ class RequestStatus(str, Enum):
     RECEIVED = "received"
     AWAITING_CUSTOMER_CONFIRMATION = "awaiting_customer_confirmation"
     AWAITING_INFORMATION = "awaiting_information"
+    CONFIRMED = "confirmed"
+
 
 
 class RequestUrgency(str, Enum):
@@ -26,7 +28,9 @@ class RequestResponse(BaseModel):
     request_id: str
     status: RequestStatus
     message: str
-
+    appointment_options: list[AppointmentOption] = Field(
+        default_factory=list
+    )
 
 class RequestExtraction(BaseModel):
     issue: str = Field(min_length=1)
@@ -40,3 +44,20 @@ class ExtractionResult(BaseModel):
     status: str
     message: str
     extraction: RequestExtraction | None = None
+
+class AppointmentOption(BaseModel):
+    option_id: str
+    technician_id: int
+    technician_name: str
+    appointment_date: str
+    start_time: str
+    end_time: str
+
+class SchedulingResult(BaseModel):
+    status: str
+    message: str
+    extraction: RequestExtraction | None = None
+    appointment_options: list[AppointmentOption] = []
+
+class AppointmentConfirmation(BaseModel):
+    option_id: str = Field(min_length=1)
