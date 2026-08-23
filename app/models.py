@@ -7,6 +7,7 @@ class RequestStatus(str, Enum):
     RECEIVED = "received"
     AWAITING_CUSTOMER_CONFIRMATION = "awaiting_customer_confirmation"
     AWAITING_INFORMATION = "awaiting_information"
+    AWAITING_APPOINTMENT_SELECTION = "awaiting_appointment_selection"
     CONFIRMED = "confirmed"
 
 

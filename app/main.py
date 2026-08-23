@@ -49,6 +49,7 @@ def create_request(
                 f"Please confirm that your name is {request.name} "
                 f"and your address is {request.address}."
             ),
+            "appointment_options": [],
         }
 
     extraction = get_extraction(
@@ -86,7 +87,7 @@ def create_request(
         db=db,
         message=request.message,
         customer_id=customer.id,
-        status=RequestStatus.RECEIVED,
+        status=RequestStatus.AWAITING_APPOINTMENT_SELECTION,
         extraction=extraction_result.extraction,
     )
 
@@ -119,7 +120,7 @@ def confirm_request(
             detail="Service request not found.",
         )
 
-    if service_request.status != RequestStatus.RECEIVED:
+    if service_request.status != RequestStatus.AWAITING_APPOINTMENT_SELECTION:
         raise HTTPException(
             status_code=400,
             detail="This service request cannot be confirmed.",
@@ -154,7 +155,7 @@ def confirm_request(
             detail="The selected appointment option is no longer available.",
         )
 
-    appointment = confirm_appointment(
+    confirm_appointment(
         db=db,
         option=selected_option,
         service_request_id=service_request.id,
