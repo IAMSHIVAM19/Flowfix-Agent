@@ -11,7 +11,10 @@ from .mock_llm_service import (
     mock_extract_unsupported_service,
     mock_extract_test_date_request,
     mock_extract_toilet_request,
+    mock_extract_follow_up_toilet,
+    mock_extract_follow_up_toilet_answered,
 )
+
 
 
 load_dotenv()
@@ -47,6 +50,12 @@ def get_extraction(
 
         if scenario == "toilet":
             return mock_extract_toilet_request()
+
+        if scenario == "follow_up_toilet":
+            return mock_extract_follow_up_toilet()
+
+        if scenario == "follow_up_toilet_answered":
+            return mock_extract_follow_up_toilet_answered()
 
         raise ValueError(
             f"Unsupported MOCK_LLM_SCENARIO: {scenario}"

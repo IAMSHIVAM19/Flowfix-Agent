@@ -196,3 +196,29 @@ class Appointment(Base):
         String(50),
         nullable=False,
     )
+
+# ============================================================
+# SERVICE REQUEST MESSAGES
+# ============================================================
+
+class ServiceRequestMessage(Base):
+    __tablename__ = "service_request_messages"
+
+    id: Mapped[int] = mapped_column(
+        primary_key=True
+    )
+
+    service_request_id: Mapped[int] = mapped_column(
+        ForeignKey("service_requests.id"),
+        nullable=False,
+    )
+
+    role: Mapped[str] = mapped_column(
+        String(30),
+        nullable=False,
+    )
+
+    message: Mapped[str] = mapped_column(
+        String(2000),
+        nullable=False,
+    )

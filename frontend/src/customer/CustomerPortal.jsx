@@ -1,5 +1,7 @@
 import {
   Box,
+  Button,
+  TextField,
   Typography,
 } from "@mui/material";
 
@@ -17,6 +19,7 @@ import useCustomerFlow from "./hooks/useCustomerFlow";
 
 import {
   createCustomerRequest,
+  provideRequestInformation,
   confirmCustomerRequest,
 } from "../services/api";
 
@@ -33,6 +36,9 @@ function CustomerPortal() {
 
     requestResult,
     setRequestResult,
+
+    followUpAnswer,
+    setFollowUpAnswer,
 
     selectedAppointment,
     setSelectedAppointment,
@@ -61,65 +67,110 @@ function CustomerPortal() {
 
 
   async function handleDetailsContinue() {
-  if (
-    customerDetails.name.trim().length < 2 ||
-    customerDetails.phone.trim().length < 8 ||
-    customerDetails.address.trim().length < 3
-  ) {
-    return;
-  }
+    if (
+      customerDetails.name.trim().length < 2 ||
+      customerDetails.phone.trim().length < 8 ||
+      customerDetails.address.trim().length < 3
+    ) {
+      return;
+    }
 
-  setError("");
-  setRequestResult(null);
-  setSelectedAppointment(null);
-  setSubmitting(true);
+    setError("");
+    setRequestResult(null);
+    setFollowUpAnswer("");
+    setSelectedAppointment(null);
+    setSubmitting(true);
 
-  // Move to the AI processing screen immediately.
-  nextStep();
+    // Move to the AI processing screen immediately.
+    nextStep();
 
-  try {
-    const requestPromise =
-      createCustomerRequest(
-        customerDetails.name.trim(),
-        customerDetails.phone.trim(),
-        customerDetails.address.trim(),
-        issue.trim()
+    try {
+      const requestPromise =
+        createCustomerRequest(
+          customerDetails.name.trim(),
+          customerDetails.phone.trim(),
+          customerDetails.address.trim(),
+          issue.trim()
+        );
+
+      // Make sure the AI-processing screen is
+      // visible for at least 1.5 seconds.
+      const minimumDisplayTime =
+        new Promise((resolve) => {
+          setTimeout(resolve, 1500);
+        });
+
+      const [result] =
+        await Promise.all([
+          requestPromise,
+          minimumDisplayTime,
+        ]);
+
+      console.log(
+        "FlowFix API response:",
+        result
       );
 
-    // Make sure the AI-processing screen is
-    // visible for at least 1.5 seconds.
-    const minimumDisplayTime =
-      new Promise((resolve) => {
-        setTimeout(resolve, 1500);
-      });
+      setRequestResult(result);
 
-    const [result] =
-      await Promise.all([
-        requestPromise,
-        minimumDisplayTime,
-      ]);
+    } catch (err) {
+      console.error(
+        "Customer request failed:",
+        err
+      );
 
-    console.log(
-      "FlowFix API response:",
-      result
-    );
-
-    setRequestResult(result);
-
-  } catch (err) {
-    console.error(
-      "Customer request failed:",
-      err
-    );
-
-    setError(
-      err.message ||
-        "We couldn't process your request."
-    );
-  } finally {
-    setSubmitting(false);
+      setError(
+        err.message ||
+          "We couldn't process your request."
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
-}
+
+
+  async function handleFollowUpSubmit() {
+    const answer = followUpAnswer.trim();
+
+    if (
+      !requestResult?.request_id ||
+      answer.length < 2
+    ) {
+      return;
+    }
+
+    setError("");
+    setSubmitting(true);
+
+    try {
+      const result =
+        await provideRequestInformation(
+          requestResult.request_id,
+          answer
+        );
+
+      console.log(
+        "FlowFix follow-up response:",
+        result
+      );
+
+      setRequestResult(result);
+      setFollowUpAnswer("");
+
+    } catch (err) {
+      console.error(
+        "Follow-up submission failed:",
+        err
+      );
+
+      setError(
+        err.message ||
+          "We couldn't process your answer."
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
 
   async function handleConfirmAppointment() {
@@ -161,6 +212,7 @@ function CustomerPortal() {
 
   function handleTryAgain() {
     setRequestResult(null);
+    setFollowUpAnswer("");
     setSelectedAppointment(null);
     setError("");
 
@@ -278,6 +330,106 @@ function CustomerPortal() {
                   />
                 )}
 
+
+                {/* AI FOLLOW-UP QUESTION */}
+                {!submitting &&
+                  requestResult?.status ===
+                    "awaiting_information" && (
+                    <Box
+                      sx={{
+                        maxWidth: 720,
+                        mx: "auto",
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          p: {
+                            xs: 2,
+                            sm: 3,
+                          },
+                          borderRadius: "24px",
+                          backgroundColor:
+                            "rgba(255,255,255,0.82)",
+                          border:
+                            "1px solid rgba(255,255,255,0.75)",
+                          backdropFilter:
+                            "blur(18px)",
+                          boxShadow:
+                            "0 20px 60px rgba(15,23,42,0.08)",
+                        }}
+                      >
+                        <Typography
+                          variant="h4"
+                          sx={{
+                            fontSize: {
+                              xs: "1.7rem",
+                              sm: "2.2rem",
+                            },
+                            fontWeight: 750,
+                          }}
+                        >
+                          We need one more detail.
+                        </Typography>
+
+                        <Typography
+                          color="text.secondary"
+                          sx={{
+                            mt: 1,
+                            mb: 3,
+                          }}
+                        >
+                          {requestResult.message}
+                        </Typography>
+
+                        <TextField
+                          fullWidth
+                          multiline
+                          minRows={4}
+                          value={followUpAnswer}
+                          onChange={(event) =>
+                            setFollowUpAnswer(
+                              event.target.value
+                            )
+                          }
+                          placeholder="Tell us a little more..."
+                        />
+
+                        <Button
+                          variant="contained"
+                          size="large"
+                          fullWidth
+                          sx={{
+                            mt: 2,
+                            borderRadius: "15px",
+                            minHeight: 52,
+                          }}
+                          disabled={
+                            followUpAnswer.trim().length < 2 ||
+                            submitting
+                          }
+                          onClick={
+                            handleFollowUpSubmit
+                          }
+                        >
+                          Continue
+                        </Button>
+
+                        {error && (
+                          <Typography
+                            color="error"
+                            sx={{
+                              mt: 2,
+                            }}
+                          >
+                            {error}
+                          </Typography>
+                        )}
+                      </Box>
+                    </Box>
+                  )}
+
+
+                {/* NO AVAILABILITY */}
                 {!submitting &&
                   noAvailability && (
                     <NoAvailabilityStep
@@ -291,8 +443,12 @@ function CustomerPortal() {
                     />
                   )}
 
+
+                {/* APPOINTMENT OPTIONS */}
                 {!submitting &&
                   !noAvailability &&
+                  requestResult?.status !==
+                    "awaiting_information" &&
                   appointmentOptions.length >
                     0 && (
                     <AppointmentStep
@@ -317,8 +473,12 @@ function CustomerPortal() {
                     />
                   )}
 
+
+                {/* GENERIC FALLBACK */}
                 {!submitting &&
                   !noAvailability &&
+                  requestResult?.status !==
+                    "awaiting_information" &&
                   appointmentOptions.length ===
                     0 &&
                   requestResult && (

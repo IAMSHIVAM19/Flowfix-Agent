@@ -177,6 +177,22 @@ export function getRequest(requestId) {
   );
 }
 
+export function provideRequestInformation(
+  requestId,
+  message
+) {
+  return request(
+    `/requests/${encodeURIComponent(
+      requestId
+    )}/information`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        message,
+      }),
+    }
+  );
+}
 
 // ============================================================
 // APPOINTMENTS
@@ -313,3 +329,4 @@ export function confirmCustomerRequest(
     }
   );
 }
+

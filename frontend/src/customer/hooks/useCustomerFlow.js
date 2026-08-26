@@ -19,6 +19,9 @@ function useCustomerFlow() {
   const [requestResult, setRequestResult] =
     useState(null);
 
+  const [followUpAnswer, setFollowUpAnswer] =
+    useState("");
+
   const [selectedAppointment, setSelectedAppointment] =
     useState(null);
 
@@ -62,6 +65,8 @@ function useCustomerFlow() {
 
     setRequestResult(null);
 
+    setFollowUpAnswer("");
+
     setSelectedAppointment(null);
 
     setSubmitting(false);
@@ -83,6 +88,9 @@ function useCustomerFlow() {
 
     requestResult,
     setRequestResult,
+
+    followUpAnswer,
+    setFollowUpAnswer,
 
     selectedAppointment,
     setSelectedAppointment,

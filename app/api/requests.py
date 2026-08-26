@@ -9,14 +9,19 @@ from ..auth.dependencies import require_operations
 from ..database import get_db
 from ..models import (
     AppointmentConfirmation,
+    CustomerInformationResponse,
+    CustomerRequest,
     RequestDetailResponse,
     RequestExtraction,
     RequestListItem,
     RequestResponse,
     RequestStatus,
-    CustomerRequest,
 )
-from ..models_db import Appointment, ServiceRequest
+from ..models_db import (
+    Appointment,
+    ServiceRequest,
+    ServiceRequestMessage,
+)
 from ..services.confirmation_service import confirm_appointment
 from ..services.extraction_service import process_extraction
 from ..services.llm_provider import get_extraction
@@ -59,8 +64,7 @@ def create_request(
         return {
             "request_id": str(uuid.uuid4()),
             "status": (
-                RequestStatus
-                .AWAITING_CUSTOMER_CONFIRMATION
+                RequestStatus.AWAITING_CUSTOMER_CONFIRMATION
             ),
             "message": (
                 "We couldn't find a customer with this "
@@ -71,10 +75,18 @@ def create_request(
             "appointment_options": [],
         }
 
+    # --------------------------------------------------------
+    # AI / mock extraction
+    # --------------------------------------------------------
+
     extraction = get_extraction(
         message=request.message,
         current_date=date.today(),
     )
+
+    # --------------------------------------------------------
+    # Create initial service request
+    # --------------------------------------------------------
 
     service_request = create_service_request(
         db=db,
@@ -84,15 +96,58 @@ def create_request(
         extraction=extraction,
     )
 
+    # Save the original customer message.
+    db.add(
+        ServiceRequestMessage(
+            service_request_id=service_request.id,
+            role="customer",
+            message=request.message.strip(),
+        )
+    )
+
+    db.commit()
+    db.refresh(service_request)
+
+    # --------------------------------------------------------
+    # Process extraction
+    # --------------------------------------------------------
+
     extraction_result = process_extraction(
         extraction=extraction,
         db=db,
     )
 
-    if extraction_result.status == "needs_clarification":
+    # --------------------------------------------------------
+    # Information required from customer
+    # --------------------------------------------------------
+
+    if extraction_result.status in {
+        "needs_clarification",
+        "needs_follow_up",
+    }:
         service_request.status = (
             RequestStatus.AWAITING_INFORMATION
         )
+
+        # Save FlowFix's follow-up question.
+        existing_question = db.scalar(
+            select(ServiceRequestMessage).where(
+                ServiceRequestMessage.service_request_id
+                == service_request.id,
+                ServiceRequestMessage.role == "assistant",
+                ServiceRequestMessage.message
+                == extraction_result.message,
+            )
+        )
+
+        if existing_question is None:
+            db.add(
+                ServiceRequestMessage(
+                    service_request_id=service_request.id,
+                    role="assistant",
+                    message=extraction_result.message,
+                )
+            )
 
         db.commit()
         db.refresh(service_request)
@@ -104,10 +159,46 @@ def create_request(
             "appointment_options": [],
         }
 
+    # --------------------------------------------------------
+    # Safety fallback
+    # --------------------------------------------------------
+
+    if (
+        extraction_result.extraction is None
+        or extraction_result.status != "ready"
+    ):
+        service_request.status = (
+            RequestStatus.AWAITING_INFORMATION
+        )
+
+        db.commit()
+        db.refresh(service_request)
+
+        return {
+            "request_id": service_request.request_id,
+            "status": service_request.status,
+            "message": (
+                extraction_result.message
+                or (
+                    "We need a little more information "
+                    "before we can continue."
+                )
+            ),
+            "appointment_options": [],
+        }
+
+    # --------------------------------------------------------
+    # Scheduling
+    # --------------------------------------------------------
+
     scheduling_result = process_scheduling(
         db=db,
         extraction=extraction_result.extraction,
     )
+
+    # --------------------------------------------------------
+    # No availability
+    # --------------------------------------------------------
 
     if scheduling_result.status == "no_availability":
         service_request.status = (
@@ -123,6 +214,216 @@ def create_request(
             "message": scheduling_result.message,
             "appointment_options": [],
         }
+
+    # --------------------------------------------------------
+    # Appointment options available
+    # --------------------------------------------------------
+
+    service_request.status = (
+        RequestStatus.AWAITING_APPOINTMENT_SELECTION
+    )
+
+    db.commit()
+    db.refresh(service_request)
+
+    return {
+        "request_id": service_request.request_id,
+        "status": service_request.status,
+        "message": scheduling_result.message,
+        "appointment_options": (
+            scheduling_result.appointment_options
+        ),
+    }
+
+
+# ============================================================
+# CUSTOMER-FACING FOLLOW-UP INFORMATION
+# ============================================================
+
+@router.post(
+    "/{request_id}/information",
+    response_model=RequestResponse,
+)
+def provide_information(
+    request_id: str,
+    information: CustomerInformationResponse,
+    db: Session = Depends(get_db),
+):
+    service_request = db.scalar(
+        select(ServiceRequest).where(
+            ServiceRequest.request_id == request_id
+        )
+    )
+
+    if service_request is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Service request not found.",
+        )
+
+    if (
+        service_request.status
+        != RequestStatus.AWAITING_INFORMATION
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "This service request is not waiting "
+                "for additional information."
+            ),
+        )
+
+    # --------------------------------------------------------
+    # Save customer's answer
+    # --------------------------------------------------------
+
+    answer = information.message.strip()
+
+    existing_answer = db.scalar(
+        select(ServiceRequestMessage).where(
+            ServiceRequestMessage.service_request_id
+            == service_request.id,
+            ServiceRequestMessage.role == "customer",
+            ServiceRequestMessage.message == answer,
+        )
+    )
+
+    if existing_answer is None:
+        db.add(
+            ServiceRequestMessage(
+                service_request_id=service_request.id,
+                role="customer",
+                message=answer,
+            )
+        )
+
+        db.commit()
+
+    # --------------------------------------------------------
+    # Rebuild request context
+    # --------------------------------------------------------
+
+    combined_message = (
+        f"Original customer request:\n"
+        f"{service_request.message}\n\n"
+        f"Customer follow-up answer:\n"
+        f"{answer}"
+    )
+
+    extraction = get_extraction(
+        message=combined_message,
+        current_date=date.today(),
+    )
+
+    # --------------------------------------------------------
+    # Process updated extraction
+    # --------------------------------------------------------
+
+    extraction_result = process_extraction(
+        extraction=extraction,
+        db=db,
+    )
+
+    # --------------------------------------------------------
+    # Another follow-up is required
+    # --------------------------------------------------------
+
+    if extraction_result.status in {
+        "needs_clarification",
+        "needs_follow_up",
+    }:
+        service_request.status = (
+            RequestStatus.AWAITING_INFORMATION
+        )
+
+        existing_question = db.scalar(
+            select(ServiceRequestMessage).where(
+                ServiceRequestMessage.service_request_id
+                == service_request.id,
+                ServiceRequestMessage.role == "assistant",
+                ServiceRequestMessage.message
+                == extraction_result.message,
+            )
+        )
+
+        if existing_question is None:
+            db.add(
+                ServiceRequestMessage(
+                    service_request_id=service_request.id,
+                    role="assistant",
+                    message=extraction_result.message,
+                )
+            )
+
+        db.commit()
+        db.refresh(service_request)
+
+        return {
+            "request_id": service_request.request_id,
+            "status": service_request.status,
+            "message": extraction_result.message,
+            "appointment_options": [],
+        }
+
+    # --------------------------------------------------------
+    # Safety fallback
+    # --------------------------------------------------------
+
+    if (
+        extraction_result.extraction is None
+        or extraction_result.status != "ready"
+    ):
+        service_request.status = (
+            RequestStatus.AWAITING_INFORMATION
+        )
+
+        db.commit()
+        db.refresh(service_request)
+
+        return {
+            "request_id": service_request.request_id,
+            "status": service_request.status,
+            "message": (
+                extraction_result.message
+                or (
+                    "We need a little more information "
+                    "before we can continue."
+                )
+            ),
+            "appointment_options": [],
+        }
+
+    # --------------------------------------------------------
+    # Continue to scheduling
+    # --------------------------------------------------------
+
+    scheduling_result = process_scheduling(
+        db=db,
+        extraction=extraction_result.extraction,
+    )
+
+    # --------------------------------------------------------
+    # No availability
+    # --------------------------------------------------------
+
+    if scheduling_result.status == "no_availability":
+        service_request.status = (
+            RequestStatus.NO_AVAILABILITY
+        )
+
+        db.commit()
+        db.refresh(service_request)
+
+        return {
+            "request_id": service_request.request_id,
+            "status": service_request.status,
+            "message": scheduling_result.message,
+            "appointment_options": [],
+        }
+
+    # --------------------------------------------------------
+    # Appointment options available
+    # --------------------------------------------------------
 
     service_request.status = (
         RequestStatus.AWAITING_APPOINTMENT_SELECTION
@@ -184,6 +485,8 @@ def confirm_request(
         preferred_date=service_request.preferred_date,
         preferred_weekday=None,
         preferred_time=service_request.preferred_time,
+        needs_follow_up=False,
+        follow_up_question=None,
     )
 
     options = get_options_for_extraction(
@@ -195,8 +498,7 @@ def confirm_request(
         (
             option
             for option in options
-            if option.option_id
-            == confirmation.option_id
+            if option.option_id == confirmation.option_id
         ),
         None,
     )

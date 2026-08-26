@@ -74,3 +74,30 @@ def mock_extract_toilet_request() -> RequestExtraction:
         preferred_weekday="Thursday",
         preferred_time="afternoon",
     )
+
+def mock_extract_follow_up_toilet() -> RequestExtraction:
+    return RequestExtraction(
+        issue="leaking toilet",
+        service="toilet repair",
+        urgency="normal",
+        preferred_date=None,
+        preferred_weekday=None,
+        preferred_time=None,
+        needs_follow_up=True,
+        follow_up_question=(
+            "Is the toilet continuously leaking, "
+            "and is it still usable?"
+        ),
+    )
+
+def mock_extract_follow_up_toilet_answered() -> RequestExtraction:
+    return RequestExtraction(
+        issue="leaking toilet",
+        service="toilet repair",
+        urgency="normal",
+        preferred_date="2026-08-28",
+        preferred_weekday="Friday",
+        preferred_time="afternoon",
+        needs_follow_up=False,
+        follow_up_question=None,
+    )
