@@ -1,0 +1,111 @@
+.customer-portal {
+  min-height: 100vh;
+  background: transparent;
+}
+
+.customer-shell {
+  width: min(
+    calc(100% - 32px),
+    1120px
+  );
+
+  margin: 0 auto;
+}
+
+.customer-content {
+  padding-top: 48px;
+  padding-bottom: 80px;
+}
+
+.customer-glass {
+  background: rgba(
+    255,
+    255,
+    255,
+    0.78
+  );
+
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+
+  border: 1px solid
+    rgba(255, 255, 255, 0.7);
+
+  box-shadow:
+    0 20px 60px
+    rgba(15, 23, 42, 0.08);
+}
+
+.customer-gradient-text {
+  background: linear-gradient(
+    135deg,
+    #2563eb 0%,
+    #14b8a6 100%
+  );
+
+  -webkit-background-clip: text;
+  background-clip: text;
+
+  color: transparent;
+}
+
+.customer-muted {
+  color: #64748b;
+}
+
+/* ============================================================
+   TABLET
+============================================================ */
+
+@media (max-width: 900px) {
+  .customer-shell {
+    width: min(
+      calc(100% - 28px),
+      760px
+    );
+  }
+
+  .customer-content {
+    padding-top: 32px;
+    padding-bottom: 64px;
+  }
+}
+
+/* ============================================================
+   MOBILE
+============================================================ */
+
+@media (max-width: 600px) {
+  .customer-shell {
+    width: calc(100% - 20px);
+  }
+
+  .customer-content {
+    padding-top: 20px;
+    padding-bottom: 40px;
+  }
+
+  .customer-glass {
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+
+    box-shadow:
+      0 14px 40px
+      rgba(15, 23, 42, 0.07);
+  }
+}
+
+/* ============================================================
+   REDUCED MOTION
+============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .customer-portal *,
+  .customer-portal *::before,
+  .customer-portal *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -34,4 +34,5 @@ def extract_request(message: str, current_date: str) -> RequestExtraction:
         return RequestExtraction.model_validate_json(response.text)
 
     except Exception as exc:
+        print(f"Gemini extraction failed: {exc}")
         raise RuntimeError("LLM extraction failed") from exc
