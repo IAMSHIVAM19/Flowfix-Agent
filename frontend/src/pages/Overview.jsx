@@ -11,6 +11,7 @@ import {
   Box,
   Card,
   CardContent,
+  Chip,
   Grid,
   LinearProgress,
   Paper,
@@ -30,6 +31,7 @@ import {
   getAppointments,
   getTechnicians,
 } from "../services/api";
+
 
 function Overview() {
   const {
@@ -60,10 +62,12 @@ function Overview() {
     execute: loadTechnicians,
   } = useApi(getTechnicians);
 
+
   const summary = summaryData;
   const requests = requestData || [];
   const appointments = appointmentData || [];
   const technicians = technicianData || [];
+
 
   const loading =
     summaryLoading ||
@@ -71,11 +75,13 @@ function Overview() {
     appointmentsLoading ||
     techniciansLoading;
 
+
   const error =
     summaryError ||
     requestsError ||
     appointmentsError ||
     techniciansError;
+
 
   async function loadOverview() {
     await Promise.allSettled([
@@ -86,6 +92,7 @@ function Overview() {
     ]);
   }
 
+
   useEffect(() => {
     loadOverview();
   }, [
@@ -95,9 +102,19 @@ function Overview() {
     loadTechnicians,
   ]);
 
+
   const recentRequests = useMemo(() => {
     return requests.slice(0, 5);
   }, [requests]);
+
+
+  const highPriorityRequests = useMemo(() => {
+    return requests.filter(
+      (request) =>
+        request.urgency === "high"
+    );
+  }, [requests]);
+
 
   const upcomingAppointments = useMemo(() => {
     return [...appointments]
@@ -113,6 +130,7 @@ function Overview() {
       .slice(0, 5);
   }, [appointments]);
 
+
   const maxWorkload = Math.max(
     ...technicians.map(
       (technician) =>
@@ -120,6 +138,7 @@ function Overview() {
     ),
     1
   );
+
 
   if (
     loading &&
@@ -131,12 +150,77 @@ function Overview() {
     return <LoadingState />;
   }
 
+
   return (
     <Box>
+
       <PageHeader
         title="Overview"
         description="Monitor FlowFix operations at a glance."
       />
+
+
+      {/* High-priority alert */}
+      {highPriorityRequests.length > 0 && (
+        <Paper
+          variant="outlined"
+          sx={{
+            mb: 3,
+            p: 2.5,
+            borderColor: "error.light",
+            backgroundColor:
+              "rgba(254,242,242,0.75)",
+          }}
+        >
+          <Stack
+            direction={{
+              xs: "column",
+              sm: "row",
+            }}
+            spacing={2}
+            sx={{
+              justifyContent:
+                "space-between",
+              alignItems: {
+                xs: "flex-start",
+                sm: "center",
+              },
+            }}
+          >
+            <Box>
+              <Typography
+                variant="h6"
+                fontWeight={700}
+                color="error.main"
+              >
+                High-priority requests
+              </Typography>
+
+              <Typography
+                variant="body2"
+                color="text.secondary"
+              >
+                {highPriorityRequests.length}{" "}
+                high-priority{" "}
+                {highPriorityRequests.length === 1
+                  ? "request requires"
+                  : "requests require"}{" "}
+                attention.
+              </Typography>
+            </Box>
+
+            <Chip
+              label={`${highPriorityRequests.length} High`}
+              color="error"
+              size="small"
+              sx={{
+                fontWeight: 700,
+              }}
+            />
+          </Stack>
+        </Paper>
+      )}
+
 
       {error && (
         <ErrorState
@@ -145,12 +229,14 @@ function Overview() {
         />
       )}
 
+
       {/* KPI cards */}
       <Grid
         container
         spacing={2}
         sx={{ mb: 3 }}
       >
+
         <Grid
           size={{
             xs: 12,
@@ -164,6 +250,7 @@ function Overview() {
             sx={{ height: "100%" }}
           >
             <CardContent>
+
               <Typography
                 variant="body2"
                 color="text.secondary"
@@ -178,9 +265,11 @@ function Overview() {
               >
                 {summary?.total_requests ?? 0}
               </Typography>
+
             </CardContent>
           </Card>
         </Grid>
+
 
         <Grid
           size={{
@@ -195,6 +284,7 @@ function Overview() {
             sx={{ height: "100%" }}
           >
             <CardContent>
+
               <Typography
                 variant="body2"
                 color="text.secondary"
@@ -209,9 +299,11 @@ function Overview() {
               >
                 {summary?.awaiting_information ?? 0}
               </Typography>
+
             </CardContent>
           </Card>
         </Grid>
+
 
         <Grid
           size={{
@@ -226,6 +318,7 @@ function Overview() {
             sx={{ height: "100%" }}
           >
             <CardContent>
+
               <Typography
                 variant="body2"
                 color="text.secondary"
@@ -240,9 +333,11 @@ function Overview() {
               >
                 {summary?.no_availability ?? 0}
               </Typography>
+
             </CardContent>
           </Card>
         </Grid>
+
 
         <Grid
           size={{
@@ -257,6 +352,7 @@ function Overview() {
             sx={{ height: "100%" }}
           >
             <CardContent>
+
               <Typography
                 variant="body2"
                 color="text.secondary"
@@ -274,9 +370,11 @@ function Overview() {
                   0
                 }
               </Typography>
+
             </CardContent>
           </Card>
         </Grid>
+
 
         <Grid
           size={{
@@ -291,6 +389,7 @@ function Overview() {
             sx={{ height: "100%" }}
           >
             <CardContent>
+
               <Typography
                 variant="body2"
                 color="text.secondary"
@@ -306,10 +405,13 @@ function Overview() {
               >
                 {summary?.confirmed ?? 0}
               </Typography>
+
             </CardContent>
           </Card>
         </Grid>
+
       </Grid>
+
 
       {/* Recent requests + upcoming appointments */}
       <Grid
@@ -317,6 +419,7 @@ function Overview() {
         spacing={3}
         sx={{ mb: 3 }}
       >
+
         {/* Recent Requests */}
         <Grid
           size={{
@@ -328,6 +431,7 @@ function Overview() {
             variant="outlined"
             sx={{ height: "100%" }}
           >
+
             <Box
               sx={{
                 p: 2.5,
@@ -350,8 +454,10 @@ function Overview() {
               </Typography>
             </Box>
 
+
             <TableContainer>
               <Table size="small">
+
                 <TableHead>
                   <TableRow>
                     <TableCell>Request</TableCell>
@@ -360,6 +466,7 @@ function Overview() {
                     <TableCell>Status</TableCell>
                   </TableRow>
                 </TableHead>
+
 
                 <TableBody>
                   {recentRequests.length === 0 ? (
@@ -379,6 +486,7 @@ function Overview() {
                         key={request.request_id}
                         hover
                       >
+
                         <TableCell>
                           <Typography
                             variant="body2"
@@ -405,14 +513,18 @@ function Overview() {
                             status={request.status}
                           />
                         </TableCell>
+
                       </TableRow>
                     ))
                   )}
                 </TableBody>
+
               </Table>
             </TableContainer>
+
           </Paper>
         </Grid>
+
 
         {/* Upcoming appointments */}
         <Grid
@@ -425,6 +537,7 @@ function Overview() {
             variant="outlined"
             sx={{ height: "100%" }}
           >
+
             <Box
               sx={{
                 p: 2.5,
@@ -447,6 +560,7 @@ function Overview() {
               </Typography>
             </Box>
 
+
             <Box sx={{ p: 2.5 }}>
               {upcomingAppointments.length === 0 ? (
                 <EmptyState
@@ -454,6 +568,7 @@ function Overview() {
                 />
               ) : (
                 <Stack spacing={2}>
+
                   {upcomingAppointments.map(
                     (appointment) => (
                       <Box
@@ -466,6 +581,7 @@ function Overview() {
                           borderRadius: 2,
                         }}
                       >
+
                         <Box
                           sx={{
                             display: "flex",
@@ -477,6 +593,7 @@ function Overview() {
                             mb: 0.5,
                           }}
                         >
+
                           <Typography
                             variant="body2"
                             fontWeight={700}
@@ -490,7 +607,9 @@ function Overview() {
                               appointment.status
                             }
                           />
+
                         </Box>
+
 
                         <Typography
                           variant="body2"
@@ -500,6 +619,7 @@ function Overview() {
                             appointment.appointment_date
                           }
                         </Typography>
+
 
                         <Typography
                           variant="body2"
@@ -514,6 +634,7 @@ function Overview() {
                           }
                         </Typography>
 
+
                         <Typography
                           variant="body2"
                           sx={{ mt: 1 }}
@@ -525,6 +646,7 @@ function Overview() {
                           }
                         </Typography>
 
+
                         <Typography
                           variant="body2"
                           color="text.secondary"
@@ -535,18 +657,24 @@ function Overview() {
                             "Unknown customer"
                           }
                         </Typography>
+
                       </Box>
                     )
                   )}
+
                 </Stack>
               )}
             </Box>
+
           </Paper>
         </Grid>
+
       </Grid>
+
 
       {/* Technician workload */}
       <Paper variant="outlined">
+
         <Box
           sx={{
             p: 2.5,
@@ -569,13 +697,16 @@ function Overview() {
           </Typography>
         </Box>
 
+
         <Box sx={{ p: 2.5 }}>
+
           {technicians.length === 0 ? (
             <EmptyState
               message="No technician data available."
             />
           ) : (
             <Stack spacing={2.5}>
+
               {technicians.map((technician) => {
                 const workload =
                   technician.appointments.length;
@@ -585,6 +716,7 @@ function Overview() {
 
                 return (
                   <Box key={technician.id}>
+
                     <Box
                       sx={{
                         display: "flex",
@@ -593,6 +725,7 @@ function Overview() {
                         mb: 0.75,
                       }}
                     >
+
                       <Box>
                         <Typography
                           variant="body2"
@@ -611,6 +744,7 @@ function Overview() {
                         </Typography>
                       </Box>
 
+
                       <Typography
                         variant="body2"
                         fontWeight={600}
@@ -620,7 +754,9 @@ function Overview() {
                           ? "appointment"
                           : "appointments"}
                       </Typography>
+
                     </Box>
+
 
                     <LinearProgress
                       variant="determinate"
@@ -630,13 +766,17 @@ function Overview() {
                         borderRadius: 4,
                       }}
                     />
+
                   </Box>
                 );
               })}
+
             </Stack>
           )}
+
         </Box>
       </Paper>
+
     </Box>
   );
 }
