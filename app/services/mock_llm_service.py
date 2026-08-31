@@ -101,3 +101,15 @@ def mock_extract_follow_up_toilet_answered() -> RequestExtraction:
         needs_follow_up=False,
         follow_up_question=None,
     )
+
+def mock_extract_high_urgency_request() -> RequestExtraction:
+    return RequestExtraction(
+        issue="major kitchen leak",
+        service="leak investigation",
+        urgency="high",
+        preferred_date="2026-08-28",
+        preferred_weekday="Friday",
+        preferred_time="morning",
+        needs_follow_up=False,
+        follow_up_question=None,
+    )

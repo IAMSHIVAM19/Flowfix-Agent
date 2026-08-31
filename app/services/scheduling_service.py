@@ -163,9 +163,22 @@ def get_options_for_extraction(
     ):
         return []
 
-    return get_appointment_options_for_request(
+    options = get_appointment_options_for_request(
         db=db,
         service_name=extraction.service,
         appointment_date=extraction.preferred_date,
         preferred_time=extraction.preferred_time,
     )
+
+    # High-priority requests should present the earliest suitable
+    # technician first. We keep all valid options available.
+    if extraction.urgency == "high":
+        options.sort(
+            key=lambda option: (
+                option.appointment_date,
+                option.start_time,
+                option.technician_id,
+            )
+        )
+
+    return options

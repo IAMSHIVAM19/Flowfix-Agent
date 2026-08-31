@@ -13,6 +13,7 @@ from .mock_llm_service import (
     mock_extract_toilet_request,
     mock_extract_follow_up_toilet,
     mock_extract_follow_up_toilet_answered,
+    mock_extract_high_urgency_request,
 )
 
 
@@ -47,6 +48,9 @@ def get_extraction(
 
         if scenario == "test_date":
             return mock_extract_test_date_request()
+
+        if scenario == "high_urgency":
+            return mock_extract_high_urgency_request()
 
         if scenario == "toilet":
             return mock_extract_toilet_request()
