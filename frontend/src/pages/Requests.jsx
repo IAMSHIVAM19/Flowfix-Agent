@@ -426,15 +426,27 @@ function Requests() {
 
                     <TableCell>
                       {request.urgency ? (
-                        <Chip
-                          label={formatLabel(
-                            request.urgency
-                          )}
-                          size="small"
-                        />
-                      ) : (
-                        "—"
-                      )}
+  <Chip
+    label={formatLabel(
+      request.urgency
+    )}
+    size="small"
+    color={
+      request.urgency === "high"
+        ? "error"
+        : request.urgency === "normal"
+          ? "primary"
+          : "default"
+    }
+    variant={
+      request.urgency === "high"
+        ? "filled"
+        : "outlined"
+    }
+  />
+) : (
+  "—"
+)}
                     </TableCell>
 
                     <TableCell>
