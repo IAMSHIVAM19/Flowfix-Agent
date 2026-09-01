@@ -1,4 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import StatusChip from "../components/StatusChip";
 import PageHeader from "../components/PageHeader";
@@ -9,6 +13,7 @@ import useApi from "../hooks/useApi";
 
 import {
   Box,
+  Button,
   Card,
   CardContent,
   Chip,
@@ -27,6 +32,8 @@ import {
 
 import {
   getDashboardSummary,
+  getDashboardNotifications,
+  updateNotificationStatus,
   getRequests,
   getAppointments,
   getTechnicians,
@@ -41,6 +48,19 @@ function Overview() {
     execute: loadSummary,
   } = useApi(getDashboardSummary);
 
+
+  const {
+    data: notificationData,
+    loading: notificationsLoading,
+    error: notificationsError,
+    execute: loadNotifications,
+  } = useApi(getDashboardNotifications);
+
+
+  const [notifications, setNotifications] =
+    useState([]);
+
+
   const {
     data: requestData,
     loading: requestsLoading,
@@ -48,12 +68,14 @@ function Overview() {
     execute: loadRequests,
   } = useApi(getRequests);
 
+
   const {
     data: appointmentData,
     loading: appointmentsLoading,
     error: appointmentsError,
     execute: loadAppointments,
   } = useApi(getAppointments);
+
 
   const {
     data: technicianData,
@@ -69,8 +91,16 @@ function Overview() {
   const technicians = technicianData || [];
 
 
+  useEffect(() => {
+    setNotifications(
+      notificationData || []
+    );
+  }, [notificationData]);
+
+
   const loading =
     summaryLoading ||
+    notificationsLoading ||
     requestsLoading ||
     appointmentsLoading ||
     techniciansLoading;
@@ -78,6 +108,7 @@ function Overview() {
 
   const error =
     summaryError ||
+    notificationsError ||
     requestsError ||
     appointmentsError ||
     techniciansError;
@@ -86,6 +117,7 @@ function Overview() {
   async function loadOverview() {
     await Promise.allSettled([
       loadSummary(),
+      loadNotifications(),
       loadRequests(),
       loadAppointments(),
       loadTechnicians(),
@@ -97,10 +129,37 @@ function Overview() {
     loadOverview();
   }, [
     loadSummary,
+    loadNotifications,
     loadRequests,
     loadAppointments,
     loadTechnicians,
   ]);
+
+
+  async function handleAcknowledgeNotification(
+    notificationId
+  ) {
+    try {
+      const updated =
+        await updateNotificationStatus(
+          notificationId,
+          "acknowledged"
+        );
+
+      setNotifications((current) =>
+        current.map((notification) =>
+          notification.id === updated.id
+            ? updated
+            : notification
+        )
+      );
+    } catch (error) {
+      console.error(
+        "Failed to acknowledge notification:",
+        error
+      );
+    }
+  }
 
 
   const recentRequests = useMemo(() => {
@@ -114,6 +173,16 @@ function Overview() {
         request.urgency === "high"
     );
   }, [requests]);
+
+
+  const highPriorityNotifications = useMemo(() => {
+    return notifications.filter(
+      (notification) =>
+        notification.notification_type ===
+          "high_priority_request" &&
+        notification.status !== "acknowledged"
+    );
+  }, [notifications]);
 
 
   const upcomingAppointments = useMemo(() => {
@@ -143,6 +212,7 @@ function Overview() {
   if (
     loading &&
     !summary &&
+    notifications.length === 0 &&
     requests.length === 0 &&
     appointments.length === 0 &&
     technicians.length === 0
@@ -160,7 +230,7 @@ function Overview() {
       />
 
 
-      {/* High-priority alert */}
+      {/* High-priority request alert */}
       {highPriorityRequests.length > 0 && (
         <Paper
           variant="outlined"
@@ -187,6 +257,7 @@ function Overview() {
               },
             }}
           >
+
             <Box>
               <Typography
                 variant="h6"
@@ -217,6 +288,136 @@ function Overview() {
                 fontWeight: 700,
               }}
             />
+
+          </Stack>
+        </Paper>
+      )}
+
+
+      {/* Notification alert */}
+      {highPriorityNotifications.length > 0 && (
+        <Paper
+          variant="outlined"
+          sx={{
+            mb: 3,
+            p: 2.5,
+            borderColor: "warning.light",
+            backgroundColor:
+              "rgba(255,247,237,0.85)",
+          }}
+        >
+          <Stack spacing={1.5}>
+
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent:
+                  "space-between",
+                alignItems: "center",
+                gap: 2,
+              }}
+            >
+              <Typography
+                variant="h6"
+                fontWeight={700}
+              >
+                Admin notifications
+              </Typography>
+
+              <Chip
+                label={`${highPriorityNotifications.length} new`}
+                color="warning"
+                size="small"
+                sx={{
+                  fontWeight: 700,
+                }}
+              />
+            </Box>
+
+
+            <Stack spacing={1}>
+              {highPriorityNotifications
+                .slice(0, 3)
+                .map((notification) => (
+                  <Box
+                    key={notification.id}
+                    sx={{
+                      p: 1.5,
+                      borderRadius: 2,
+                      backgroundColor:
+                        "rgba(255,255,255,0.75)",
+                      border: 1,
+                      borderColor:
+                        "rgba(245,158,11,0.20)",
+                    }}
+                  >
+
+                    <Typography
+                      variant="body2"
+                      fontWeight={600}
+                    >
+                      {notification.message}
+                    </Typography>
+
+
+                    <Stack
+                      direction={{
+                        xs: "column",
+                        sm: "row",
+                      }}
+                      spacing={1.5}
+                      sx={{
+                        mt: 0.75,
+                        alignItems: {
+                          xs: "flex-start",
+                          sm: "center",
+                        },
+                        justifyContent:
+                          "space-between",
+                      }}
+                    >
+
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                      >
+                        Request #
+                        {notification.service_request_id ??
+                          "—"}
+                      </Typography>
+
+
+                      {notification.status ===
+                      "acknowledged" ? (
+                        <Chip
+                          label="Acknowledged"
+                          color="success"
+                          size="small"
+                          sx={{
+                            fontWeight: 700,
+                          }}
+                        />
+                      ) : (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="warning"
+                          onClick={() =>
+                            handleAcknowledgeNotification(
+                              notification.id
+                            )
+                          }
+                        >
+                          Acknowledge
+                        </Button>
+                      )}
+
+                    </Stack>
+
+                  </Box>
+                ))}
+            </Stack>
+
           </Stack>
         </Paper>
       )}

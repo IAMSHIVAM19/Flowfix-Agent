@@ -4,8 +4,8 @@ from sqlalchemy.orm import Session
 
 from ..auth.dependencies import require_operations
 from ..database import get_db
-from ..models import DashboardSummaryResponse, RequestStatus
-from ..models_db import ServiceRequest
+from ..models import DashboardSummaryResponse, RequestStatus, NotificationResponse
+from ..models_db import Notification, ServiceRequest
 
 
 router = APIRouter(
@@ -79,3 +79,37 @@ def dashboard_summary(
         ),
         "confirmed": confirmed or 0,
     }
+
+
+@router.get(
+    "/notifications",
+    response_model=list[NotificationResponse],
+    dependencies=[Depends(require_operations)],
+)
+def dashboard_notifications(
+    db: Session = Depends(get_db),
+):
+    notifications = list(
+        db.scalars(
+            select(Notification)
+            .order_by(Notification.id.desc())
+        ).all()
+    )
+
+    return [
+        {
+            "id": notification.id,
+            "service_request_id": (
+                notification.service_request_id
+            ),
+            "recipient_type": (
+                notification.recipient_type
+            ),
+            "notification_type": (
+                notification.notification_type
+            ),
+            "message": notification.message,
+            "status": notification.status,
+        }
+        for notification in notifications
+    ]

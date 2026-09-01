@@ -53,12 +53,19 @@ class CustomerInformationResponse(BaseModel):
 
 class RequestExtraction(BaseModel):
     issue: str = Field(min_length=1)
+
     service: str | None = None
+
     urgency: RequestUrgency | None = None
+
     preferred_date: str | None = None
+
     preferred_weekday: str | None = None
+
     preferred_time: str | None = None
+
     needs_follow_up: bool = False
+
     follow_up_question: str | None = None
 
 
@@ -79,6 +86,7 @@ class SchedulingResult(BaseModel):
     status: str
     message: str
     extraction: RequestExtraction | None = None
+
     appointment_options: list[AppointmentOption] = Field(
         default_factory=list
     )
@@ -96,6 +104,7 @@ class RequestResponse(BaseModel):
     request_id: str
     status: RequestStatus
     message: str
+
     appointment_options: list[AppointmentOption] = Field(
         default_factory=list
     )
@@ -108,6 +117,45 @@ class ExtractionResult(BaseModel):
 
 
 # ============================================================
+# NOTIFICATIONS
+# ============================================================
+
+class NotificationResponse(BaseModel):
+    id: int
+
+    service_request_id: int | None = None
+
+    recipient_type: str
+
+    notification_type: str
+
+    message: str
+
+    status: str
+
+
+class NotificationCreateRequest(BaseModel):
+    service_request_id: int | None = None
+
+    recipient_type: str = Field(
+        pattern="^(customer|admin|technician)$"
+    )
+
+    notification_type: str = Field(
+        min_length=1,
+        max_length=100,
+    )
+
+    message: str = Field(
+        min_length=1,
+        max_length=2000,
+    )
+class NotificationStatusUpdateRequest(BaseModel):
+    status: str = Field(
+        pattern="^(simulated|acknowledged)$"
+    )
+
+# ============================================================
 # CUSTOMER RESPONSE SCHEMAS
 # ============================================================
 
@@ -116,6 +164,7 @@ class CustomerSummary(BaseModel):
     name: str
     phone: str
     address: str
+
     request_count: int
     appointment_count: int
 
@@ -123,11 +172,14 @@ class CustomerSummary(BaseModel):
 class CustomerRequestHistory(BaseModel):
     id: int
     request_id: str
+
     issue: str | None = None
     service: str | None = None
     urgency: RequestUrgency | None = None
+
     preferred_date: str | None = None
     preferred_time: str | None = None
+
     status: RequestStatus
 
 
@@ -135,9 +187,11 @@ class CustomerAppointmentHistory(BaseModel):
     id: int
     service_request_id: int
     technician_id: int
+
     appointment_date: str
     start_time: str
     end_time: str
+
     status: str
 
 
@@ -167,20 +221,25 @@ class RequestListItem(BaseModel):
     request_id: str
     customer_id: int
     message: str
+
     issue: str | None = None
     service: str | None = None
     urgency: RequestUrgency | None = None
+
     preferred_date: str | None = None
     preferred_time: str | None = None
+
     status: RequestStatus
 
 
 class RequestAppointmentDetail(BaseModel):
     id: int
     technician_id: int
+
     appointment_date: str
     start_time: str
     end_time: str
+
     status: str
 
 
@@ -189,12 +248,16 @@ class RequestDetailResponse(BaseModel):
     request_id: str
     customer_id: int
     message: str
+
     issue: str | None = None
     service: str | None = None
     urgency: RequestUrgency | None = None
+
     preferred_date: str | None = None
     preferred_time: str | None = None
+
     status: RequestStatus
+
     appointment: RequestAppointmentDetail | None = None
 
 
@@ -216,14 +279,20 @@ class AppointmentTechnician(BaseModel):
 
 class AppointmentResponse(BaseModel):
     id: int
+
     request_id: str | None = None
+
     customer: AppointmentCustomer | None = None
+
     technician: AppointmentTechnician | None = None
+
     service: str | None = None
     issue: str | None = None
+
     appointment_date: str
     start_time: str
     end_time: str
+
     status: str
 
 
@@ -234,18 +303,22 @@ class AppointmentResponse(BaseModel):
 class TechnicianAppointment(BaseModel):
     id: int
     service_request_id: int
+
     appointment_date: str
     start_time: str
     end_time: str
+
     status: str
 
 
 class TechnicianResponse(BaseModel):
     id: int
     name: str
+
     services: list[str] = Field(
         default_factory=list
     )
+
     appointments: list[
         TechnicianAppointment
     ] = Field(
@@ -263,6 +336,7 @@ class TechnicianAvailability(BaseModel):
 class TechnicianAvailabilityResponse(BaseModel):
     technician_id: int
     technician_name: str
+
     availability: list[
         TechnicianAvailability
     ] = Field(
@@ -312,9 +386,11 @@ class AdminUserCreateRequest(BaseModel):
         min_length=3,
         max_length=100,
     )
+
     password: str = Field(
         min_length=8
     )
+
     role: str = Field(
         pattern="^(admin|operations)$"
     )

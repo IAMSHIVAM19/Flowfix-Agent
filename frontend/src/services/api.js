@@ -160,6 +160,28 @@ export function getDashboardSummary() {
   );
 }
 
+export function getDashboardNotifications() {
+  return request(
+    "/dashboard/notifications"
+  );
+}
+
+export function updateNotificationStatus(
+  notificationId,
+  status
+) {
+  return request(
+    `/admin/notifications/${encodeURIComponent(
+      notificationId
+    )}/status`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({
+        status,
+      }),
+    }
+  );
+}
 
 // ============================================================
 // REQUESTS

@@ -222,3 +222,40 @@ class ServiceRequestMessage(Base):
         String(2000),
         nullable=False,
     )
+
+# ============================================================
+# NOTIFICATIONS
+# ============================================================
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id: Mapped[int] = mapped_column(
+        primary_key=True
+    )
+
+    service_request_id: Mapped[int | None] = mapped_column(
+        ForeignKey("service_requests.id"),
+        nullable=True,
+    )
+
+    recipient_type: Mapped[str] = mapped_column(
+        String(30),
+        nullable=False,
+    )
+
+    notification_type: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+    )
+
+    message: Mapped[str] = mapped_column(
+        String(2000),
+        nullable=False,
+    )
+
+    status: Mapped[str] = mapped_column(
+        String(30),
+        nullable=False,
+        default="simulated",
+    )

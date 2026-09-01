@@ -9,10 +9,11 @@ from .services.confirmation_service import confirm_appointment
 db = SessionLocal()
 
 option = AppointmentOption(
-    technician_id=3,
-    technician_name="Sarah",
+    option_id="test-confirmation-option",
+    technician_id=2,
+    technician_name="John",
     appointment_date="2026-08-27",
-    start_time="13:00",
+    start_time="09:00",
     end_time="17:00",
 )
 

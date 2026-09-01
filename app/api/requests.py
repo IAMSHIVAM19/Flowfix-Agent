@@ -19,6 +19,7 @@ from ..models import (
 )
 from ..models_db import (
     Appointment,
+    Notification,
     ServiceRequest,
     ServiceRequestMessage,
 )
@@ -116,6 +117,26 @@ def create_request(
         extraction=extraction,
         db=db,
     )
+
+    # --------------------------------------------------------
+    # High-priority notification
+    # --------------------------------------------------------
+
+    if extraction.urgency == "high":
+        db.add(
+            Notification(
+                service_request_id=service_request.id,
+                recipient_type="admin",
+                notification_type="high_priority_request",
+                message=(
+                    "A high-priority plumbing request "
+                    "requires attention."
+                ),
+                status="simulated",
+            )
+        )
+
+        db.commit()
 
     # --------------------------------------------------------
     # Information required from customer
@@ -325,6 +346,37 @@ def provide_information(
     )
 
     # --------------------------------------------------------
+    # High-priority notification after follow-up
+    # --------------------------------------------------------
+
+    if extraction.urgency == "high":
+        existing_notification = db.scalar(
+            select(Notification).where(
+                Notification.service_request_id
+                == service_request.id,
+                Notification.recipient_type == "admin",
+                Notification.notification_type
+                == "high_priority_request",
+            )
+        )
+
+        if existing_notification is None:
+            db.add(
+                Notification(
+                    service_request_id=service_request.id,
+                    recipient_type="admin",
+                    notification_type="high_priority_request",
+                    message=(
+                        "A high-priority plumbing request "
+                        "requires attention."
+                    ),
+                    status="simulated",
+                )
+            )
+
+            db.commit()
+
+    # --------------------------------------------------------
     # Another follow-up is required
     # --------------------------------------------------------
 
@@ -498,7 +550,8 @@ def confirm_request(
         (
             option
             for option in options
-            if option.option_id == confirmation.option_id
+            if option.option_id
+            == confirmation.option_id
         ),
         None,
     )

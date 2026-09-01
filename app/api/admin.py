@@ -11,13 +11,15 @@ from ..models import (
     AdminUserRoleUpdateRequest,
     AdminUserStatusUpdateRequest,
 )
-from ..models_db import AdminUser
+from ..models_db import AdminUser, Notification
 
 from ..models import (
     AdminUserCreateRequest,
     AdminUserResponse,
     AdminUserRoleUpdateRequest,
     AdminUserStatusUpdateRequest,
+    NotificationStatusUpdateRequest,
+    NotificationResponse,
 )
 router = APIRouter(
     prefix="/admin",
@@ -219,4 +221,59 @@ def update_admin_user_role(
         "username": user.username,
         "role": user.role,
         "is_active": user.is_active,
+    }
+
+# ============================================================
+# ACKNOWLEDGE NOTIFICATION
+# ============================================================
+
+@router.patch(
+    "/notifications/{notification_id}/status",
+    response_model=NotificationResponse,
+)
+def update_notification_status(
+    notification_id: int,
+    status_update: NotificationStatusUpdateRequest,
+    db: Session = Depends(get_db),
+    current_admin=Depends(require_admin),
+):
+    notification = db.scalar(
+        select(Notification).where(
+            Notification.id == notification_id
+        )
+    )
+
+    if notification is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Notification not found.",
+        )
+
+    notification.status = status_update.status
+
+    try:
+        db.commit()
+        db.refresh(notification)
+
+    except Exception:
+        db.rollback()
+
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to update notification status.",
+        )
+
+    return {
+        "id": notification.id,
+        "service_request_id": (
+            notification.service_request_id
+        ),
+        "recipient_type": (
+            notification.recipient_type
+        ),
+        "notification_type": (
+            notification.notification_type
+        ),
+        "message": notification.message,
+        "status": notification.status,
     }
