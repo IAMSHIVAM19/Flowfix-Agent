@@ -3,11 +3,15 @@ from datetime import date
 from sqlalchemy.orm import Session
 
 from ..models import ExtractionResult, RequestExtraction
-from .service_validation import get_service_by_name
+from .service_validation import (
+    get_service_by_name,
+    normalize_service_name,
+)
 from .validation_service import (
     build_clarification_message,
     date_matches_weekday,
     get_missing_fields,
+    normalize_extraction_date,
 )
 
 
@@ -16,20 +20,43 @@ def process_extraction(
     db: Session,
 ) -> ExtractionResult:
     # ------------------------------------------------------------
+    # Normalize deterministic service information first.
+    #
+    # This must happen BEFORE checking needs_follow_up so that
+    # obvious services such as "tap leaking" are still converted
+    # to their canonical FlowFix service even when the LLM also
+    # asks a follow-up question.
+    # ------------------------------------------------------------
+
+    if extraction.service is not None:
+        extraction.service = normalize_service_name(
+            extraction.service
+        )
+    else:
+        extraction.service = normalize_service_name(
+            extraction.issue
+        )
+
+    # ------------------------------------------------------------
+    # Normalize relative weekday/date information.
+    # ------------------------------------------------------------
+
+    extraction = normalize_extraction_date(
+        extraction=extraction,
+        current_date=date.today(),
+    )
+
+    # ------------------------------------------------------------
     # AI-generated follow-up question
     # ------------------------------------------------------------
-    #
-    # If the extraction model explicitly says that more information
-    # is needed, use the AI-generated question first.
-    #
-    # This takes priority over the older generic missing-field
-    # clarification so the customer gets a useful question about
-    # their actual plumbing problem.
-    #
+
     if extraction.needs_follow_up:
         question = (
             extraction.follow_up_question
-            or "Could you provide a little more information about the problem?"
+            or (
+                "Could you provide a little more information "
+                "about the problem?"
+            )
         )
 
         return ExtractionResult(
@@ -39,11 +66,11 @@ def process_extraction(
         )
 
     # ------------------------------------------------------------
-    # Existing required-field validation
+    # Required-field validation
     # ------------------------------------------------------------
 
     missing_fields = get_missing_fields(
-        extraction,
+        extraction=extraction,
         current_date=date.today(),
     )
 
@@ -57,7 +84,7 @@ def process_extraction(
         )
 
     # ------------------------------------------------------------
-    # Existing date / weekday validation
+    # Date / weekday validation
     # ------------------------------------------------------------
 
     if not date_matches_weekday(
@@ -74,7 +101,7 @@ def process_extraction(
         )
 
     # ------------------------------------------------------------
-    # Existing service validation
+    # Service validation
     # ------------------------------------------------------------
 
     service = get_service_by_name(

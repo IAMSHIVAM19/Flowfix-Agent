@@ -3,52 +3,40 @@ import { useState } from "react";
 const TOTAL_STEPS = 4;
 
 function useCustomerFlow() {
-  const [currentStep, setCurrentStep] =
-    useState(1);
+  const [currentStep, setCurrentStep] = useState(1);
 
-  const [issue, setIssue] =
-    useState("");
+  const [issue, setIssue] = useState("");
 
-  const [customerDetails, setCustomerDetails] =
-    useState({
-      name: "",
-      phone: "",
-      address: "",
-    });
+  const [customerDetails, setCustomerDetails] = useState({
+    name: "",
+    phone: "",
+    address: "",
+  });
 
-  const [requestResult, setRequestResult] =
-    useState(null);
+  const [requestResult, setRequestResult] = useState(null);
 
-  const [followUpAnswer, setFollowUpAnswer] =
-    useState("");
+  const [followUpAnswer, setFollowUpAnswer] = useState("");
 
-  const [selectedAppointment, setSelectedAppointment] =
-    useState(null);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
 
-  const [submitting, setSubmitting] =
+  const [submitting, setSubmitting] = useState(false);
+
+  const [confirming, setConfirming] = useState(false);
+
+  const [confirmingCustomer, setConfirmingCustomer] =
     useState(false);
 
-  const [confirming, setConfirming] =
-    useState(false);
-
-  const [error, setError] =
-    useState("");
+  const [error, setError] = useState("");
 
   function nextStep() {
     setCurrentStep((step) =>
-      Math.min(
-        step + 1,
-        TOTAL_STEPS
-      )
+      Math.min(step + 1, TOTAL_STEPS)
     );
   }
 
   function previousStep() {
     setCurrentStep((step) =>
-      Math.max(
-        step - 1,
-        1
-      )
+      Math.max(step - 1, 1)
     );
   }
 
@@ -73,12 +61,13 @@ function useCustomerFlow() {
 
     setConfirming(false);
 
+    setConfirmingCustomer(false);
+
     setError("");
   }
 
   return {
     currentStep,
-    totalSteps: TOTAL_STEPS,
 
     issue,
     setIssue,
@@ -100,6 +89,9 @@ function useCustomerFlow() {
 
     confirming,
     setConfirming,
+
+    confirmingCustomer,
+    setConfirmingCustomer,
 
     error,
     setError,

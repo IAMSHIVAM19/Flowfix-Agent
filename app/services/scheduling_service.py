@@ -1,3 +1,4 @@
+from datetime import datetime
 import hashlib
 
 from sqlalchemy import select
@@ -11,12 +12,37 @@ from ..models_db import (
     TechnicianAvailability,
     technician_services,
 )
+from .service_validation import normalize_service_name
 
 
 TIME_SLOT_MAP = {
     "morning": ("09:00", "12:00"),
     "afternoon": ("13:00", "17:00"),
 }
+
+
+def is_slot_in_past(
+    appointment_date: str,
+    start_time: str,
+    now: datetime | None = None,
+) -> bool:
+    """
+    Check whether a given appointment slot has already passed or started.
+    """
+    if now is None:
+        now = datetime.now()
+
+    today_str = now.date().isoformat()
+
+    if appointment_date < today_str:
+        return True
+
+    if appointment_date == today_str:
+        current_time_str = now.strftime("%H:%M")
+        if start_time <= current_time_str:
+            return True
+
+    return False
 
 
 def normalize_time_slot(
@@ -40,7 +66,9 @@ def build_option_id(
         f"{end_time}"
     )
 
-    return hashlib.sha256(raw.encode()).hexdigest()[:16]
+    return hashlib.sha256(
+        raw.encode()
+    ).hexdigest()[:16]
 
 
 def find_available_technicians_for_request(
@@ -49,35 +77,62 @@ def find_available_technicians_for_request(
     appointment_date: str,
     start_time: str,
     end_time: str,
+    filter_past: bool = True,
+    now: datetime | None = None,
 ) -> list[Technician]:
+    if filter_past and is_slot_in_past(
+        appointment_date=appointment_date,
+        start_time=start_time,
+        now=now,
+    ):
+        return []
+
+    normalized_service_name = normalize_service_name(
+        service_name
+    )
+
+    if normalized_service_name is None:
+        return []
+
     qualified_statement = (
         select(Technician)
         .join(
             technician_services,
-            Technician.id == technician_services.c.technician_id,
+            Technician.id
+            == technician_services.c.technician_id,
         )
         .join(
             Service,
-            Service.id == technician_services.c.service_id,
+            Service.id
+            == technician_services.c.service_id,
         )
         .where(
-            Service.name == service_name.strip().lower(),
+            Service.name
+            == normalized_service_name,
         )
     )
 
     qualified_technicians = list(
-        db.scalars(qualified_statement).all()
+        db.scalars(
+            qualified_statement
+        ).all()
     )
 
     available_technicians = []
 
     for technician in qualified_technicians:
         availability = db.scalar(
-            select(TechnicianAvailability).where(
-                TechnicianAvailability.technician_id == technician.id,
-                TechnicianAvailability.available_date == appointment_date,
-                TechnicianAvailability.start_time <= start_time,
-                TechnicianAvailability.end_time >= end_time,
+            select(
+                TechnicianAvailability
+            ).where(
+                TechnicianAvailability.technician_id
+                == technician.id,
+                TechnicianAvailability.available_date
+                == appointment_date,
+                TechnicianAvailability.start_time
+                <= start_time,
+                TechnicianAvailability.end_time
+                >= end_time,
             )
         )
 
@@ -86,15 +141,21 @@ def find_available_technicians_for_request(
 
         overlapping_appointment = db.scalar(
             select(Appointment).where(
-                Appointment.technician_id == technician.id,
-                Appointment.appointment_date == appointment_date,
-                Appointment.start_time < end_time,
-                Appointment.end_time > start_time,
+                Appointment.technician_id
+                == technician.id,
+                Appointment.appointment_date
+                == appointment_date,
+                Appointment.start_time
+                < end_time,
+                Appointment.end_time
+                > start_time,
             )
         )
 
         if overlapping_appointment is None:
-            available_technicians.append(technician)
+            available_technicians.append(
+                technician
+            )
 
     return available_technicians
 
@@ -128,20 +189,28 @@ def get_appointment_options_for_request(
     service_name: str,
     appointment_date: str,
     preferred_time: str,
+    filter_past: bool = True,
+    now: datetime | None = None,
 ) -> list[AppointmentOption]:
-    time_slot = normalize_time_slot(preferred_time)
+    time_slot = normalize_time_slot(
+        preferred_time
+    )
 
     if time_slot is None:
         return []
 
     start_time, end_time = time_slot
 
-    technicians = find_available_technicians_for_request(
-        db=db,
-        service_name=service_name,
-        appointment_date=appointment_date,
-        start_time=start_time,
-        end_time=end_time,
+    technicians = (
+        find_available_technicians_for_request(
+            db=db,
+            service_name=service_name,
+            appointment_date=appointment_date,
+            start_time=start_time,
+            end_time=end_time,
+            filter_past=filter_past,
+            now=now,
+        )
     )
 
     return build_appointment_options(
@@ -155,6 +224,8 @@ def get_appointment_options_for_request(
 def get_options_for_extraction(
     db: Session,
     extraction: RequestExtraction,
+    filter_past: bool = True,
+    now: datetime | None = None,
 ) -> list[AppointmentOption]:
     if (
         extraction.service is None
@@ -168,6 +239,8 @@ def get_options_for_extraction(
         service_name=extraction.service,
         appointment_date=extraction.preferred_date,
         preferred_time=extraction.preferred_time,
+        filter_past=filter_past,
+        now=now,
     )
 
     # High-priority requests should present the earliest suitable

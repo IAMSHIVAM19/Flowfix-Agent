@@ -9,6 +9,12 @@ SERVICES = [
     "toilet repair",
     "shower repair",
     "leak investigation",
+    "blocked drains",
+    "hot water system",
+    "burst pipe repair",
+    "gas fitting",
+    "roof plumbing",
+    "backflow prevention",
 ]
 
 

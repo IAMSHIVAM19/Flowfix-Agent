@@ -4,6 +4,7 @@ from sqlalchemy import (
     ForeignKey,
     String,
     Table,
+    Text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -96,10 +97,10 @@ class ServiceRequest(Base):
         nullable=True,
     )
 
-    message: Mapped[str] = mapped_column(String(1000))
+    message: Mapped[str] = mapped_column(Text)
 
     issue: Mapped[str | None] = mapped_column(
-        String(255),
+        Text,
         nullable=True,
     )
 

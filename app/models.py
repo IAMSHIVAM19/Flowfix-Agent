@@ -44,11 +44,34 @@ class CustomerRequest(BaseModel):
     message: str = Field(min_length=1)
 
 
+class CustomerConfirmationRequest(BaseModel):
+    name: str = Field(min_length=1)
+    phone: str = Field(min_length=8)
+    address: str = Field(min_length=1)
+
+
 class CustomerInformationResponse(BaseModel):
     message: str = Field(
         min_length=1,
         max_length=2000,
     )
+
+
+class AgentOperationRequest(BaseModel):
+    request_id: str | None = None
+
+    message: str = Field(
+        min_length=1,
+        max_length=2000,
+    )
+
+
+class AdminBookAppointmentRequest(BaseModel):
+    technician_id: int
+    appointment_date: str = Field(min_length=10, max_length=10)
+    start_time: str = Field(min_length=4, max_length=5)
+    end_time: str = Field(min_length=4, max_length=5)
+    service_name: str | None = None
 
 
 class RequestExtraction(BaseModel):
@@ -94,6 +117,31 @@ class SchedulingResult(BaseModel):
 
 class AppointmentConfirmation(BaseModel):
     option_id: str = Field(min_length=1)
+
+
+class AgentToolCall(BaseModel):
+    tool_name: str
+    arguments: dict
+    result: dict | list | None = None
+
+
+class AgentResult(BaseModel):
+    status: str
+    message: str
+    tool_calls: list[AgentToolCall] = Field(
+        default_factory=list
+    )
+
+
+class AgentSchedulingResult(BaseModel):
+    status: str
+    message: str
+
+    appointment_options: list[
+        AppointmentOption
+    ] = Field(
+        default_factory=list
+    )
 
 
 # ============================================================
@@ -150,10 +198,13 @@ class NotificationCreateRequest(BaseModel):
         min_length=1,
         max_length=2000,
     )
+
+
 class NotificationStatusUpdateRequest(BaseModel):
     status: str = Field(
         pattern="^(simulated|acknowledged)$"
     )
+
 
 # ============================================================
 # CUSTOMER RESPONSE SCHEMAS
@@ -167,6 +218,8 @@ class CustomerSummary(BaseModel):
 
     request_count: int
     appointment_count: int
+    requests_count: int | None = None
+    appointments_count: int | None = None
 
 
 class CustomerRequestHistory(BaseModel):
@@ -219,7 +272,7 @@ class CustomerDetail(BaseModel):
 class RequestListItem(BaseModel):
     id: int
     request_id: str
-    customer_id: int
+    customer_id: int | None = None
     message: str
 
     issue: str | None = None
@@ -246,7 +299,7 @@ class RequestAppointmentDetail(BaseModel):
 class RequestDetailResponse(BaseModel):
     id: int
     request_id: str
-    customer_id: int
+    customer_id: int | None = None
     message: str
 
     issue: str | None = None
@@ -280,6 +333,7 @@ class AppointmentTechnician(BaseModel):
 class AppointmentResponse(BaseModel):
     id: int
 
+    service_request_id: int | None = None
     request_id: str | None = None
 
     customer: AppointmentCustomer | None = None
@@ -323,6 +377,22 @@ class TechnicianResponse(BaseModel):
         TechnicianAppointment
     ] = Field(
         default_factory=list
+    )
+
+
+class TechnicianServiceResponse(BaseModel):
+    id: int
+    name: str
+
+
+class TechnicianCreateRequest(BaseModel):
+    name: str = Field(
+        min_length=2,
+        max_length=100,
+    )
+
+    service_ids: list[int] = Field(
+        min_length=1,
     )
 
 

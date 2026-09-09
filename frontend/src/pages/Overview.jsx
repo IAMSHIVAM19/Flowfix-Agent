@@ -1,16 +1,4 @@
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-
-import StatusChip from "../components/StatusChip";
-import PageHeader from "../components/PageHeader";
-import LoadingState from "../components/LoadingState";
-import ErrorState from "../components/ErrorState";
-import EmptyState from "../components/EmptyState";
-import useApi from "../hooks/useApi";
-
+import { useEffect, useMemo, useState } from "react";
 import {
   Box,
   Button,
@@ -27,8 +15,33 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Tooltip,
   Typography,
 } from "@mui/material";
+import {
+  Assignment,
+  CalendarMonth,
+  CheckCircle,
+  Engineering,
+  Error,
+  FlashOn,
+  HourglassEmpty,
+  OpenInNew,
+  Refresh,
+  SmartToy,
+  WarningAmber,
+  ArrowForward,
+  AccessTime,
+  Check,
+} from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
+
+import StatusChip from "../components/StatusChip";
+import PageHeader from "../components/PageHeader";
+import LoadingState from "../components/LoadingState";
+import ErrorState from "../components/ErrorState";
+import EmptyState from "../components/EmptyState";
+import useApi from "../hooks/useApi";
 
 import {
   getDashboardSummary,
@@ -39,15 +52,15 @@ import {
   getTechnicians,
 } from "../services/api";
 
-
 function Overview() {
+  const navigate = useNavigate();
+
   const {
     data: summaryData,
     loading: summaryLoading,
     error: summaryError,
     execute: loadSummary,
   } = useApi(getDashboardSummary);
-
 
   const {
     data: notificationData,
@@ -56,10 +69,7 @@ function Overview() {
     execute: loadNotifications,
   } = useApi(getDashboardNotifications);
 
-
-  const [notifications, setNotifications] =
-    useState([]);
-
+  const [notifications, setNotifications] = useState([]);
 
   const {
     data: requestData,
@@ -68,14 +78,12 @@ function Overview() {
     execute: loadRequests,
   } = useApi(getRequests);
 
-
   const {
     data: appointmentData,
     loading: appointmentsLoading,
     error: appointmentsError,
     execute: loadAppointments,
   } = useApi(getAppointments);
-
 
   const {
     data: technicianData,
@@ -84,19 +92,14 @@ function Overview() {
     execute: loadTechnicians,
   } = useApi(getTechnicians);
 
-
   const summary = summaryData;
   const requests = requestData || [];
   const appointments = appointmentData || [];
   const technicians = technicianData || [];
 
-
   useEffect(() => {
-    setNotifications(
-      notificationData || []
-    );
+    setNotifications(notificationData || []);
   }, [notificationData]);
-
 
   const loading =
     summaryLoading ||
@@ -105,14 +108,12 @@ function Overview() {
     appointmentsLoading ||
     techniciansLoading;
 
-
   const error =
     summaryError ||
     notificationsError ||
     requestsError ||
     appointmentsError ||
     techniciansError;
-
 
   async function loadOverview() {
     await Promise.allSettled([
@@ -124,7 +125,6 @@ function Overview() {
     ]);
   }
 
-
   useEffect(() => {
     loadOverview();
   }, [
@@ -135,79 +135,57 @@ function Overview() {
     loadTechnicians,
   ]);
 
-
-  async function handleAcknowledgeNotification(
-    notificationId
-  ) {
+  async function handleAcknowledgeNotification(notificationId) {
     try {
-      const updated =
-        await updateNotificationStatus(
-          notificationId,
-          "acknowledged"
-        );
-
+      const updated = await updateNotificationStatus(
+        notificationId,
+        "acknowledged"
+      );
       setNotifications((current) =>
         current.map((notification) =>
-          notification.id === updated.id
-            ? updated
-            : notification
+          notification.id === updated.id ? updated : notification
         )
       );
-    } catch (error) {
-      console.error(
-        "Failed to acknowledge notification:",
-        error
-      );
+    } catch (err) {
+      console.error("Failed to acknowledge notification:", err);
     }
   }
 
-
   const recentRequests = useMemo(() => {
-    return requests.slice(0, 5);
+    return requests.slice(0, 6);
   }, [requests]);
-
 
   const highPriorityRequests = useMemo(() => {
+    const actionableStatuses = new Set([
+      "received",
+      "awaiting_information",
+      "awaiting_appointment_selection",
+      "no_availability",
+    ]);
+
     return requests.filter(
       (request) =>
-        request.urgency === "high"
+        request.urgency === "high" && actionableStatuses.has(request.status)
     );
   }, [requests]);
-
 
   const highPriorityNotifications = useMemo(() => {
     return notifications.filter(
       (notification) =>
-        notification.notification_type ===
-          "high_priority_request" &&
+        notification.notification_type === "high_priority_request" &&
         notification.status !== "acknowledged"
     );
   }, [notifications]);
 
-
   const upcomingAppointments = useMemo(() => {
     return [...appointments]
       .sort((a, b) => {
-        const first =
-          `${a.appointment_date} ${a.start_time}`;
-
-        const second =
-          `${b.appointment_date} ${b.start_time}`;
-
+        const first = `${a.appointment_date} ${a.start_time}`;
+        const second = `${b.appointment_date} ${b.start_time}`;
         return first.localeCompare(second);
       })
-      .slice(0, 5);
+      .slice(0, 6);
   }, [appointments]);
-
-
-  const maxWorkload = Math.max(
-    ...technicians.map(
-      (technician) =>
-        technician.appointments.length
-    ),
-    1
-  );
-
 
   if (
     loading &&
@@ -220,764 +198,582 @@ function Overview() {
     return <LoadingState />;
   }
 
+  // Calculate fleet capacity metrics
+  const totalFleetSlots = technicians.reduce((acc, t) => acc + (t.appointments?.length || 0), 0);
 
   return (
     <Box>
-
       <PageHeader
-        title="Overview"
-        description="Monitor FlowFix operations at a glance."
+        title="Operations Command Center"
+        description="Real-time request dispatch, emergency alerts, and technician fleet status."
+        badge={
+          <Chip
+            size="small"
+            label="System Online"
+            sx={{
+              backgroundColor: "rgba(16, 185, 129, 0.1)",
+              color: "#047857",
+              border: "1px solid rgba(16, 185, 129, 0.25)",
+              fontWeight: 700,
+              fontSize: "0.72rem",
+            }}
+          />
+        }
+        action={
+          <Stack direction="row" spacing={1.5}>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<Refresh />}
+              onClick={loadOverview}
+              sx={{ borderRadius: "10px", borderColor: "#E2E8F0" }}
+            >
+              Refresh Data
+            </Button>
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<SmartToy />}
+              onClick={() => navigate("/agent")}
+              sx={{ borderRadius: "10px" }}
+            >
+              Ask AI Copilot
+            </Button>
+          </Stack>
+        }
       />
 
+      {error && <ErrorState message={error} onRetry={loadOverview} />}
 
-      {/* High-priority request alert */}
+      {/* Emergency High-Priority Triage Banner */}
       {highPriorityRequests.length > 0 && (
         <Paper
           variant="outlined"
           sx={{
-            mb: 3,
-            p: 2.5,
-            borderColor: "error.light",
-            backgroundColor:
-              "rgba(254,242,242,0.75)",
+            mb: 3.5,
+            p: 3,
+            borderRadius: "20px",
+            borderColor: "rgba(239, 68, 68, 0.3)",
+            backgroundColor: "rgba(254, 242, 242, 0.8)",
+            boxShadow: "0 10px 25px -5px rgba(239, 68, 68, 0.12)",
           }}
         >
-          <Stack
-            direction={{
-              xs: "column",
-              sm: "row",
-            }}
-            spacing={2}
-            sx={{
-              justifyContent:
-                "space-between",
-              alignItems: {
-                xs: "flex-start",
-                sm: "center",
-              },
-            }}
-          >
+          <Stack spacing={2}>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 1.5 }}>
+              <Stack direction="row" spacing={1.5} alignItems="center">
+                <Box
+                  sx={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: "10px",
+                    backgroundColor: "#EF4444",
+                    color: "#FFFFFF",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: "0 4px 12px rgba(239, 68, 68, 0.3)",
+                  }}
+                >
+                  <FlashOn sx={{ fontSize: 22 }} />
+                </Box>
+                <Box>
+                  <Typography variant="h6" fontWeight={800} color="#991B1B" sx={{ lineHeight: 1.1 }}>
+                    Emergency Triage Required
+                  </Typography>
+                  <Typography variant="body2" color="#B91C1C">
+                    {highPriorityRequests.length}{" "}
+                    {highPriorityRequests.length === 1 ? "high-priority emergency request needs" : "high-priority emergency requests need"}{" "}
+                    immediate dispatch.
+                  </Typography>
+                </Box>
+              </Stack>
 
-            <Box>
-              <Typography
-                variant="h6"
-                fontWeight={700}
-                color="error.main"
-              >
-                High-priority requests
-              </Typography>
-
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
-                {highPriorityRequests.length}{" "}
-                high-priority{" "}
-                {highPriorityRequests.length === 1
-                  ? "request requires"
-                  : "requests require"}{" "}
-                attention.
-              </Typography>
-            </Box>
-
-            <Chip
-              label={`${highPriorityRequests.length} High`}
-              color="error"
-              size="small"
-              sx={{
-                fontWeight: 700,
-              }}
-            />
-
-          </Stack>
-        </Paper>
-      )}
-
-
-      {/* Notification alert */}
-      {highPriorityNotifications.length > 0 && (
-        <Paper
-          variant="outlined"
-          sx={{
-            mb: 3,
-            p: 2.5,
-            borderColor: "warning.light",
-            backgroundColor:
-              "rgba(255,247,237,0.85)",
-          }}
-        >
-          <Stack spacing={1.5}>
-
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent:
-                  "space-between",
-                alignItems: "center",
-                gap: 2,
-              }}
-            >
-              <Typography
-                variant="h6"
-                fontWeight={700}
-              >
-                Admin notifications
-              </Typography>
-
-              <Chip
-                label={`${highPriorityNotifications.length} new`}
-                color="warning"
+              <Button
+                variant="contained"
+                color="error"
                 size="small"
+                endIcon={<ArrowForward />}
+                onClick={() => navigate("/requests?filter=high")}
                 sx={{
+                  borderRadius: "10px",
                   fontWeight: 700,
+                  backgroundColor: "#DC2626",
+                  "&:hover": { backgroundColor: "#B91C1C" },
                 }}
-              />
+              >
+                Triage Emergency Queue
+              </Button>
             </Box>
 
-
-            <Stack spacing={1}>
-              {highPriorityNotifications
-                .slice(0, 3)
-                .map((notification) => (
-                  <Box
-                    key={notification.id}
-                    sx={{
-                      p: 1.5,
-                      borderRadius: 2,
-                      backgroundColor:
-                        "rgba(255,255,255,0.75)",
-                      border: 1,
-                      borderColor:
-                        "rgba(245,158,11,0.20)",
-                    }}
-                  >
-
-                    <Typography
-                      variant="body2"
-                      fontWeight={600}
-                    >
-                      {notification.message}
-                    </Typography>
-
-
-                    <Stack
-                      direction={{
-                        xs: "column",
-                        sm: "row",
-                      }}
-                      spacing={1.5}
-                      sx={{
-                        mt: 0.75,
-                        alignItems: {
-                          xs: "flex-start",
-                          sm: "center",
-                        },
-                        justifyContent:
-                          "space-between",
-                      }}
-                    >
-
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                      >
-                        Request #
-                        {notification.service_request_id ??
-                          "—"}
+            {/* Quick List of top urgent request preview */}
+            <Stack spacing={1} sx={{ mt: 1 }}>
+              {highPriorityRequests.slice(0, 2).map((item) => (
+                <Box
+                  key={item.id}
+                  sx={{
+                    p: 2,
+                    borderRadius: "14px",
+                    backgroundColor: "#FFFFFF",
+                    border: "1px solid rgba(239, 68, 68, 0.2)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: 1.5,
+                  }}
+                >
+                  <Box>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <Box component="span" className="pulse-dot-red" />
+                      <Typography variant="subtitle2" fontWeight={750} color="#0F172A">
+                        {item.issue || "Urgent Plumbing Incident"}
                       </Typography>
-
-
-                      {notification.status ===
-                      "acknowledged" ? (
-                        <Chip
-                          label="Acknowledged"
-                          color="success"
-                          size="small"
-                          sx={{
-                            fontWeight: 700,
-                          }}
-                        />
-                      ) : (
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          color="warning"
-                          onClick={() =>
-                            handleAcknowledgeNotification(
-                              notification.id
-                            )
-                          }
-                        >
-                          Acknowledge
-                        </Button>
-                      )}
-
+                      <Chip
+                        label={`Req #${item.id}`}
+                        size="small"
+                        sx={{ height: 20, fontSize: "0.7rem", fontWeight: 700 }}
+                      />
                     </Stack>
-
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                      {item.message}
+                    </Typography>
                   </Box>
-                ))}
-            </Stack>
 
+                  <Stack direction="row" spacing={1.5} alignItems="center">
+                    <StatusChip status={item.status} />
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="error"
+                      onClick={() => navigate(`/requests?id=${item.id}`)}
+                      sx={{ borderRadius: "8px", py: 0.3 }}
+                    >
+                      Inspect & Dispatch
+                    </Button>
+                  </Stack>
+                </Box>
+              ))}
+            </Stack>
           </Stack>
         </Paper>
       )}
 
-
-      {error && (
-        <ErrorState
-          message={error}
-          onRetry={loadOverview}
-        />
-      )}
-
-
-      {/* KPI cards */}
-      <Grid
-        container
-        spacing={2}
-        sx={{ mb: 3 }}
-      >
-
-        <Grid
-          size={{
-            xs: 12,
-            sm: 6,
-            md: 4,
-            lg: 2.4,
-          }}
-        >
-          <Card
-            variant="outlined"
-            sx={{ height: "100%" }}
-          >
+      {/* KPI Command Metrics Row */}
+      <Grid container spacing={2.5} sx={{ mb: 3.5 }}>
+        {/* Total Requests */}
+        <Grid size={{ xs: 12, sm: 6, md: 4, lg: 2.4 }}>
+          <Card sx={{ height: "100%", p: 0.5 }}>
             <CardContent>
-
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
-                Total Requests
-              </Typography>
-
-              <Typography
-                variant="h4"
-                fontWeight={700}
-                sx={{ mt: 1 }}
-              >
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
+                <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  Total Requests
+                </Typography>
+                <Box sx={{ p: 1, borderRadius: "10px", backgroundColor: "rgba(37, 99, 235, 0.08)", color: "#2563EB" }}>
+                  <Assignment fontSize="small" />
+                </Box>
+              </Box>
+              <Typography variant="h3" fontWeight={850} color="#0F172A">
                 {summary?.total_requests ?? 0}
               </Typography>
-
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+                Lifetime service inquiries
+              </Typography>
             </CardContent>
           </Card>
         </Grid>
 
-
-        <Grid
-          size={{
-            xs: 12,
-            sm: 6,
-            md: 4,
-            lg: 2.4,
-          }}
-        >
-          <Card
-            variant="outlined"
-            sx={{ height: "100%" }}
-          >
+        {/* High Urgency Alerts */}
+        <Grid size={{ xs: 12, sm: 6, md: 4, lg: 2.4 }}>
+          <Card sx={{ height: "100%", p: 0.5, borderColor: highPriorityRequests.length > 0 ? "rgba(239, 68, 68, 0.3)" : "#E2E8F0" }}>
             <CardContent>
-
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
-                Awaiting Information
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
+                <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  Emergency Triage
+                </Typography>
+                <Box sx={{ p: 1, borderRadius: "10px", backgroundColor: "rgba(239, 68, 68, 0.08)", color: "#EF4444" }}>
+                  <FlashOn fontSize="small" />
+                </Box>
+              </Box>
+              <Typography variant="h3" fontWeight={850} color={highPriorityRequests.length > 0 ? "#EF4444" : "#0F172A"}>
+                {highPriorityRequests.length}
               </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+                Require priority response
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
 
-              <Typography
-                variant="h4"
-                fontWeight={700}
-                sx={{ mt: 1 }}
-              >
+        {/* Awaiting Information */}
+        <Grid size={{ xs: 12, sm: 6, md: 4, lg: 2.4 }}>
+          <Card sx={{ height: "100%", p: 0.5 }}>
+            <CardContent>
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
+                <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  Awaiting Details
+                </Typography>
+                <Box sx={{ p: 1, borderRadius: "10px", backgroundColor: "rgba(245, 158, 11, 0.08)", color: "#F59E0B" }}>
+                  <HourglassEmpty fontSize="small" />
+                </Box>
+              </Box>
+              <Typography variant="h3" fontWeight={850} color="#0F172A">
                 {summary?.awaiting_information ?? 0}
               </Typography>
-
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+                AI asking follow-up context
+              </Typography>
             </CardContent>
           </Card>
         </Grid>
 
-
-        <Grid
-          size={{
-            xs: 12,
-            sm: 6,
-            md: 4,
-            lg: 2.4,
-          }}
-        >
-          <Card
-            variant="outlined"
-            sx={{ height: "100%" }}
-          >
+        {/* Ready to Book */}
+        <Grid size={{ xs: 12, sm: 6, md: 4, lg: 2.4 }}>
+          <Card sx={{ height: "100%", p: 0.5 }}>
             <CardContent>
-
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
-                No Availability
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
+                <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  Slot Selection
+                </Typography>
+                <Box sx={{ p: 1, borderRadius: "10px", backgroundColor: "rgba(13, 148, 136, 0.08)", color: "#0D9488" }}>
+                  <CalendarMonth fontSize="small" />
+                </Box>
+              </Box>
+              <Typography variant="h3" fontWeight={850} color="#0F172A">
+                {summary?.awaiting_appointment_selection ?? 0}
               </Typography>
-
-              <Typography
-                variant="h4"
-                fontWeight={700}
-                sx={{ mt: 1 }}
-              >
-                {summary?.no_availability ?? 0}
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+                Customer reviewing windows
               </Typography>
-
             </CardContent>
           </Card>
         </Grid>
 
-
-        <Grid
-          size={{
-            xs: 12,
-            sm: 6,
-            md: 4,
-            lg: 2.4,
-          }}
-        >
-          <Card
-            variant="outlined"
-            sx={{ height: "100%" }}
-          >
+        {/* Confirmed Bookings */}
+        <Grid size={{ xs: 12, sm: 6, md: 4, lg: 2.4 }}>
+          <Card sx={{ height: "100%", p: 0.5, borderColor: "rgba(16, 185, 129, 0.3)" }}>
             <CardContent>
-
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
-                Awaiting Selection
-              </Typography>
-
-              <Typography
-                variant="h4"
-                fontWeight={700}
-                sx={{ mt: 1 }}
-              >
-                {
-                  summary?.awaiting_appointment_selection ??
-                  0
-                }
-              </Typography>
-
-            </CardContent>
-          </Card>
-        </Grid>
-
-
-        <Grid
-          size={{
-            xs: 12,
-            sm: 6,
-            md: 4,
-            lg: 2.4,
-          }}
-        >
-          <Card
-            variant="outlined"
-            sx={{ height: "100%" }}
-          >
-            <CardContent>
-
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
-                Confirmed
-              </Typography>
-
-              <Typography
-                variant="h4"
-                fontWeight={700}
-                color="success.main"
-                sx={{ mt: 1 }}
-              >
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
+                <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  Confirmed Jobs
+                </Typography>
+                <Box sx={{ p: 1, borderRadius: "10px", backgroundColor: "rgba(16, 185, 129, 0.1)", color: "#10B981" }}>
+                  <CheckCircle fontSize="small" />
+                </Box>
+              </Box>
+              <Typography variant="h3" fontWeight={850} color="#059669">
                 {summary?.confirmed ?? 0}
               </Typography>
-
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+                Dispatched to technicians
+              </Typography>
             </CardContent>
           </Card>
         </Grid>
-
       </Grid>
 
-
-      {/* Recent requests + upcoming appointments */}
-      <Grid
-        container
-        spacing={3}
-        sx={{ mb: 3 }}
-      >
-
-        {/* Recent Requests */}
-        <Grid
-          size={{
-            xs: 12,
-            lg: 7,
-          }}
-        >
-          <Paper
-            variant="outlined"
-            sx={{ height: "100%" }}
+      {/* Fleet Live Capacity Row */}
+      <Paper variant="outlined" sx={{ p: 3, mb: 3.5, borderRadius: "20px" }}>
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2.5 }}>
+          <Box>
+            <Typography variant="h6" fontWeight={800} color="#0F172A" sx={{ letterSpacing: "-0.02em" }}>
+              Technician Fleet Capacity
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Active dispatch load across certified field technicians
+            </Typography>
+          </Box>
+          <Button
+            size="small"
+            variant="text"
+            endIcon={<ArrowForward />}
+            onClick={() => navigate("/technicians")}
+            sx={{ fontWeight: 700 }}
           >
-
-            <Box
-              sx={{
-                p: 2.5,
-                borderBottom: 1,
-                borderColor: "divider",
-              }}
-            >
-              <Typography
-                variant="h6"
-                fontWeight={700}
-              >
-                Recent Requests
-              </Typography>
-
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
-                Latest requests entering FlowFix.
-              </Typography>
-            </Box>
-
-
-            <TableContainer>
-              <Table size="small">
-
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Request</TableCell>
-                    <TableCell>Issue</TableCell>
-                    <TableCell>Service</TableCell>
-                    <TableCell>Status</TableCell>
-                  </TableRow>
-                </TableHead>
-
-
-                <TableBody>
-                  {recentRequests.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={4}
-                        sx={{ p: 0 }}
-                      >
-                        <EmptyState
-                          message="No recent requests found."
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    recentRequests.map((request) => (
-                      <TableRow
-                        key={request.request_id}
-                        hover
-                      >
-
-                        <TableCell>
-                          <Typography
-                            variant="body2"
-                            fontWeight={600}
-                          >
-                            {request.request_id.slice(
-                              0,
-                              8
-                            )}
-                            ...
-                          </Typography>
-                        </TableCell>
-
-                        <TableCell>
-                          {request.issue || "—"}
-                        </TableCell>
-
-                        <TableCell>
-                          {request.service || "—"}
-                        </TableCell>
-
-                        <TableCell>
-                          <StatusChip
-                            status={request.status}
-                          />
-                        </TableCell>
-
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-
-              </Table>
-            </TableContainer>
-
-          </Paper>
-        </Grid>
-
-
-        {/* Upcoming appointments */}
-        <Grid
-          size={{
-            xs: 12,
-            lg: 5,
-          }}
-        >
-          <Paper
-            variant="outlined"
-            sx={{ height: "100%" }}
-          >
-
-            <Box
-              sx={{
-                p: 2.5,
-                borderBottom: 1,
-                borderColor: "divider",
-              }}
-            >
-              <Typography
-                variant="h6"
-                fontWeight={700}
-              >
-                Upcoming Appointments
-              </Typography>
-
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
-                Next scheduled service appointments.
-              </Typography>
-            </Box>
-
-
-            <Box sx={{ p: 2.5 }}>
-              {upcomingAppointments.length === 0 ? (
-                <EmptyState
-                  message="No upcoming appointments."
-                />
-              ) : (
-                <Stack spacing={2}>
-
-                  {upcomingAppointments.map(
-                    (appointment) => (
-                      <Box
-                        key={appointment.id}
-                        sx={{
-                          p: 1.5,
-                          border: 1,
-                          borderColor:
-                            "divider",
-                          borderRadius: 2,
-                        }}
-                      >
-
-                        <Box
-                          sx={{
-                            display: "flex",
-                            justifyContent:
-                              "space-between",
-                            alignItems:
-                              "flex-start",
-                            gap: 2,
-                            mb: 0.5,
-                          }}
-                        >
-
-                          <Typography
-                            variant="body2"
-                            fontWeight={700}
-                          >
-                            Appointment #
-                            {appointment.id}
-                          </Typography>
-
-                          <StatusChip
-                            status={
-                              appointment.status
-                            }
-                          />
-
-                        </Box>
-
-
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                        >
-                          {
-                            appointment.appointment_date
-                          }
-                        </Typography>
-
-
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                        >
-                          {
-                            appointment.start_time
-                          }{" "}
-                          –{" "}
-                          {
-                            appointment.end_time
-                          }
-                        </Typography>
-
-
-                        <Typography
-                          variant="body2"
-                          sx={{ mt: 1 }}
-                        >
-                          {
-                            appointment
-                              .technician?.name ||
-                            "Unassigned"
-                          }
-                        </Typography>
-
-
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                        >
-                          {
-                            appointment
-                              .customer?.name ||
-                            "Unknown customer"
-                          }
-                        </Typography>
-
-                      </Box>
-                    )
-                  )}
-
-                </Stack>
-              )}
-            </Box>
-
-          </Paper>
-        </Grid>
-
-      </Grid>
-
-
-      {/* Technician workload */}
-      <Paper variant="outlined">
-
-        <Box
-          sx={{
-            p: 2.5,
-            borderBottom: 1,
-            borderColor: "divider",
-          }}
-        >
-          <Typography
-            variant="h6"
-            fontWeight={700}
-          >
-            Technician Workload
-          </Typography>
-
-          <Typography
-            variant="body2"
-            color="text.secondary"
-          >
-            Current appointment load across technicians.
-          </Typography>
+            Manage Fleet
+          </Button>
         </Box>
 
+        <Grid container spacing={2}>
+          {technicians.map((tech) => {
+            const bookedCount = tech.appointments?.length || 0;
+            const maxCapacity = Math.max(5, bookedCount);
+            const percentage = Math.min(Math.round((bookedCount / maxCapacity) * 100), 100);
+            const isFull = percentage >= 80;
 
-        <Box sx={{ p: 2.5 }}>
+            return (
+              <Grid key={tech.id} size={{ xs: 12, sm: 6, md: 3 }}>
+                <Box
+                  sx={{
+                    p: 2,
+                    borderRadius: "14px",
+                    border: "1px solid #E2E8F0",
+                    backgroundColor: "#F8FAFC",
+                    transition: "all 0.15s ease",
+                    "&:hover": {
+                      borderColor: "#CBD5E1",
+                      backgroundColor: "#FFFFFF",
+                      boxShadow: "0 4px 12px rgba(15, 23, 42, 0.05)",
+                    },
+                  }}
+                >
+                  <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1.5 }}>
+                    <Box
+                      sx={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: "12px",
+                        background: "linear-gradient(135deg, #2563EB, #0D9488)",
+                        color: "#FFFFFF",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontWeight: 800,
+                        fontSize: "0.95rem",
+                      }}
+                    >
+                      {tech.name.charAt(0)}
+                    </Box>
+                    <Box sx={{ flexGrow: 1 }}>
+                      <Typography variant="subtitle2" fontWeight={750} color="#0F172A">
+                        {tech.name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {tech.services?.length || 0} Specialties
+                      </Typography>
+                    </Box>
+                    <Chip
+                      label={isFull ? "Busy" : "Available"}
+                      size="small"
+                      sx={{
+                        height: 20,
+                        fontSize: "0.68rem",
+                        fontWeight: 750,
+                        backgroundColor: isFull ? "rgba(245, 158, 11, 0.1)" : "rgba(16, 185, 129, 0.1)",
+                        color: isFull ? "#B45309" : "#047857",
+                      }}
+                    />
+                  </Stack>
 
-          {technicians.length === 0 ? (
-            <EmptyState
-              message="No technician data available."
-            />
-          ) : (
-            <Stack spacing={2.5}>
-
-              {technicians.map((technician) => {
-                const workload =
-                  technician.appointments.length;
-
-                const percentage =
-                  (workload / maxWorkload) * 100;
-
-                return (
-                  <Box key={technician.id}>
-
+                  {/* Capacity Bar */}
+                  <Box sx={{ mb: 1 }}>
                     <Box
                       sx={{
                         display: "flex",
-                        justifyContent:
-                          "space-between",
-                        mb: 0.75,
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        gap: 1,
+                        mb: 0.5,
                       }}
                     >
-
-                      <Box>
-                        <Typography
-                          variant="body2"
-                          fontWeight={700}
-                        >
-                          {technician.name}
-                        </Typography>
-
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                        >
-                          {technician.services.join(
-                            " • "
-                          )}
-                        </Typography>
-                      </Box>
-
-
-                      <Typography
-                        variant="body2"
-                        fontWeight={600}
-                      >
-                        {workload}{" "}
-                        {workload === 1
-                          ? "appointment"
-                          : "appointments"}
+                      <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                        Workload
                       </Typography>
-
+                      <Typography variant="caption" fontWeight={750} color="#0F172A">
+                        {bookedCount} / {maxCapacity} ({percentage}%)
+                      </Typography>
                     </Box>
-
-
                     <LinearProgress
                       variant="determinate"
                       value={percentage}
                       sx={{
-                        height: 8,
-                        borderRadius: 4,
+                        height: 6,
+                        borderRadius: 3,
+                        backgroundColor: "#E2E8F0",
+                        "& .MuiLinearProgress-bar": {
+                          borderRadius: 3,
+                          backgroundColor: isFull ? "#F59E0B" : "#2563EB",
+                        },
                       }}
                     />
-
                   </Box>
-                );
-              })}
-
-            </Stack>
-          )}
-
-        </Box>
+                </Box>
+              </Grid>
+            );
+          })}
+        </Grid>
       </Paper>
 
+      {/* Operations Grid: Recent Requests & Upcoming Appointments */}
+      <Grid container spacing={3.5}>
+        {/* Left: Recent Service Requests Feed */}
+        <Grid size={{ xs: 12, lg: 7 }}>
+          <Paper variant="outlined" sx={{ p: 3, borderRadius: "20px", height: "100%" }}>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+              <Box>
+                <Typography variant="h6" fontWeight={800} color="#0F172A">
+                  Recent Service Requests
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Latest customer submissions analyzed by FlowFix AI
+                </Typography>
+              </Box>
+              <Button
+                size="small"
+                variant="text"
+                endIcon={<ArrowForward />}
+                onClick={() => navigate("/requests")}
+                sx={{ fontWeight: 700 }}
+              >
+                View All
+              </Button>
+            </Box>
+
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Request</TableCell>
+                    <TableCell>Issue / Service</TableCell>
+                    <TableCell>Urgency</TableCell>
+                    <TableCell>Status</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {recentRequests.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          No requests recorded yet.
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    recentRequests.map((req) => (
+                      <TableRow
+                        key={req.id}
+                        hover
+                        onClick={() => navigate(`/requests?id=${req.id}`)}
+                        sx={{ cursor: "pointer" }}
+                      >
+                        <TableCell>
+                          <Typography variant="subtitle2" fontWeight={750} color="#0F172A">
+                            #{req.id}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                            {req.customer_id ? `Cust #${req.customer_id}` : "Unlinked"}
+                          </Typography>
+                        </TableCell>
+
+                        <TableCell>
+                          <Typography variant="body2" fontWeight={650} color="#0F172A">
+                            {req.service || req.issue || "General Plumbing"}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ maxWidth: 220, display: "block", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
+                            {req.message}
+                          </Typography>
+                        </TableCell>
+
+                        <TableCell>
+                          <Chip
+                            label={req.urgency || "standard"}
+                            size="small"
+                            sx={{
+                              height: 22,
+                              fontSize: "0.68rem",
+                              fontWeight: 750,
+                              textTransform: "uppercase",
+                              backgroundColor: req.urgency === "high" ? "rgba(239, 68, 68, 0.12)" : "rgba(100, 116, 139, 0.08)",
+                              color: req.urgency === "high" ? "#EF4444" : "#475569",
+                            }}
+                          />
+                        </TableCell>
+
+                        <TableCell>
+                          <StatusChip status={req.status} size="small" />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+        </Grid>
+
+        {/* Right: Upcoming Dispatch Schedule */}
+        <Grid size={{ xs: 12, lg: 5 }}>
+          <Paper variant="outlined" sx={{ p: 3, borderRadius: "20px", height: "100%" }}>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+              <Box>
+                <Typography variant="h6" fontWeight={800} color="#0F172A">
+                  Upcoming Appointments
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Scheduled technician dispatches
+                </Typography>
+              </Box>
+              <Button
+                size="small"
+                variant="text"
+                endIcon={<ArrowForward />}
+                onClick={() => navigate("/appointments")}
+                sx={{ fontWeight: 700 }}
+              >
+                Schedule
+              </Button>
+            </Box>
+
+            <Stack spacing={1.5}>
+              {upcomingAppointments.length === 0 ? (
+                <Box sx={{ p: 4, textAlign: "center" }}>
+                  <Typography variant="body2" color="text.secondary">
+                    No upcoming appointments scheduled.
+                  </Typography>
+                </Box>
+              ) : (
+                upcomingAppointments.map((app) => (
+                  <Box
+                    key={app.id}
+                    sx={{
+                      p: 2,
+                      borderRadius: "14px",
+                      border: "1px solid #E2E8F0",
+                      backgroundColor: "#F8FAFC",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      transition: "all 0.15s ease",
+                      "&:hover": {
+                        backgroundColor: "#FFFFFF",
+                        borderColor: "#CBD5E1",
+                        boxShadow: "0 4px 12px rgba(15, 23, 42, 0.04)",
+                      },
+                    }}
+                  >
+                    <Stack direction="row" spacing={1.5} alignItems="center">
+                      <Box
+                        sx={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: "12px",
+                          backgroundColor: "rgba(37, 99, 235, 0.08)",
+                          color: "#2563EB",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <CalendarMonth fontSize="small" />
+                      </Box>
+                      <Box>
+                        <Typography variant="subtitle2" fontWeight={750} color="#0F172A">
+                          {app.appointment_date}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {app.start_time} – {app.end_time} • {app.technician?.name || "Assigned Plumber"}
+                        </Typography>
+                      </Box>
+                    </Stack>
+
+                    <StatusChip status={app.status || "confirmed"} size="small" />
+                  </Box>
+                ))
+              )}
+            </Stack>
+          </Paper>
+        </Grid>
+      </Grid>
     </Box>
   );
 }

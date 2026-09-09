@@ -44,7 +44,7 @@ def list_appointments(
             Technician.id
             == Appointment.technician_id,
         )
-        .join(
+        .outerjoin(
             Customer,
             Customer.id
             == ServiceRequest.customer_id,
@@ -60,15 +60,20 @@ def list_appointments(
     return [
         {
             "id": appointment.id,
+            "service_request_id": service_request.id,
             "request_id": (
                 service_request.request_id
             ),
-            "customer": {
-                "id": customer.id,
-                "name": customer.name,
-                "phone": customer.phone,
-                "address": customer.address,
-            },
+            "customer": (
+                {
+                    "id": customer.id,
+                    "name": customer.name,
+                    "phone": customer.phone,
+                    "address": customer.address,
+                }
+                if customer is not None
+                else None
+            ),
             "technician": {
                 "id": technician.id,
                 "name": technician.name,

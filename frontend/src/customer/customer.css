@@ -1,6 +1,7 @@
 .customer-portal {
   min-height: 100vh;
   background: transparent;
+  overflow-x: hidden;
 }
 
 .customer-shell {
@@ -8,7 +9,8 @@
     calc(100% - 32px),
     1120px
   );
-
+  max-width: 100%;
+  box-sizing: border-box;
   margin: 0 auto;
 }
 
@@ -78,6 +80,8 @@
 @media (max-width: 600px) {
   .customer-shell {
     width: calc(100% - 20px);
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .customer-content {

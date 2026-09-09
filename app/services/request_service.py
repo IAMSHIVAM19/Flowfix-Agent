@@ -7,8 +7,14 @@ from ..models import RequestExtraction
 from ..models_db import Customer, ServiceRequest
 
 
-def get_customer_by_phone(db: Session, phone: str):
-    statement = select(Customer).where(Customer.phone == phone)
+def get_customer_by_phone(
+    db: Session,
+    phone: str,
+):
+    statement = select(Customer).where(
+        Customer.phone == phone
+    )
+
     return db.scalar(statement)
 
 
@@ -53,5 +59,58 @@ def create_service_request(
     db.add(service_request)
     db.commit()
     db.refresh(service_request)
+
+    return service_request
+
+
+def merge_extraction_with_existing_request(
+    service_request: ServiceRequest,
+    extraction: RequestExtraction,
+) -> RequestExtraction:
+    """
+    Preserve previously validated request information when a
+    follow-up extraction omits fields that were already known.
+
+    A missing value from the new extraction means the customer did
+    not provide new information for that field; it does not erase
+    the previously validated value.
+    """
+
+    if extraction.service is None:
+        extraction.service = service_request.service
+
+    if extraction.urgency is None:
+        extraction.urgency = service_request.urgency
+
+    if extraction.preferred_date is None:
+        extraction.preferred_date = (
+            service_request.preferred_date
+        )
+
+    if extraction.preferred_time is None:
+        extraction.preferred_time = (
+            service_request.preferred_time
+        )
+
+    if service_request.issue:
+        extraction.issue = service_request.issue
+
+    return extraction
+
+
+def update_service_request_from_extraction(
+    service_request: ServiceRequest,
+    extraction: RequestExtraction,
+):
+    if extraction.issue:
+        service_request.issue = extraction.issue
+    if extraction.service:
+        service_request.service = extraction.service
+    if extraction.urgency:
+        service_request.urgency = extraction.urgency
+    if extraction.preferred_date:
+        service_request.preferred_date = extraction.preferred_date
+    if extraction.preferred_time:
+        service_request.preferred_time = extraction.preferred_time
 
     return service_request

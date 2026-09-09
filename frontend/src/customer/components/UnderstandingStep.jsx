@@ -1,27 +1,42 @@
 import {
   AutoAwesome,
+  CheckCircle,
+  Engineering,
+  CalendarMonth,
+  ContentPasteSearch,
 } from "@mui/icons-material";
-
 import {
   Box,
+  CircularProgress,
+  Paper,
   Stack,
   Typography,
 } from "@mui/material";
-
 import {
   AnimatePresence,
   motion,
 } from "framer-motion";
-
 import {
   useEffect,
   useState,
 } from "react";
 
-const messages = [
-  "Understanding your request",
-  "Finding the right service",
-  "Checking technician availability",
+const steps = [
+  {
+    icon: <ContentPasteSearch sx={{ fontSize: 20 }} />,
+    title: "Understanding request context & urgency",
+    desc: "AI classifies issue severity and required parts",
+  },
+  {
+    icon: <Engineering sx={{ fontSize: 20 }} />,
+    title: "Matching qualified licensed technicians",
+    desc: "Filtering plumbers certified for your specific repair",
+  },
+  {
+    icon: <CalendarMonth sx={{ fontSize: 20 }} />,
+    title: "Finding optimal dispatch slots",
+    desc: "Locking available service windows near your address",
+  },
 ];
 
 const MotionBox = motion.create(Box);
@@ -29,18 +44,15 @@ const MotionBox = motion.create(Box);
 function UnderstandingStep({
   error,
 }) {
-  const [messageIndex, setMessageIndex] =
-    useState(0);
+  const [activeStep, setActiveStep] = useState(0);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setMessageIndex((current) =>
-        (current + 1) % messages.length
-      );
-    }, 900);
+    const timer1 = setTimeout(() => setActiveStep(1), 600);
+    const timer2 = setTimeout(() => setActiveStep(2), 1200);
 
     return () => {
-      clearInterval(timer);
+      clearTimeout(timer1);
+      clearTimeout(timer2);
     };
   }, []);
 
@@ -51,11 +63,16 @@ function UnderstandingStep({
           maxWidth: 620,
           mx: "auto",
           textAlign: "center",
+          p: 4,
+          borderRadius: "24px",
+          backgroundColor: "rgba(254, 242, 242, 0.9)",
+          border: "1px solid #FCA5A5",
         }}
       >
         <Typography
           variant="h4"
-          fontWeight={700}
+          fontWeight={800}
+          color="error.main"
           gutterBottom
         >
           We couldn't process that request.
@@ -73,6 +90,7 @@ function UnderstandingStep({
       sx={{
         maxWidth: 620,
         mx: "auto",
+        width: "100%",
       }}
     >
       <Stack
@@ -82,143 +100,139 @@ function UnderstandingStep({
           textAlign: "center",
         }}
       >
-        {/* Soft animated AI mark */}
+        {/* Animated AI Emblem */}
         <MotionBox
           animate={{
-            scale: [1, 1.025, 1],
+            scale: [1, 1.05, 1],
             boxShadow: [
-              "0 12px 34px rgba(37,99,235,0.08)",
-              "0 18px 46px rgba(37,99,235,0.14)",
-              "0 12px 34px rgba(37,99,235,0.08)",
+              "0 15px 35px rgba(37,99,235,0.15)",
+              "0 22px 55px rgba(37,99,235,0.25)",
+              "0 15px 35px rgba(37,99,235,0.15)",
             ],
           }}
           transition={{
-            duration: 2.8,
+            duration: 2.4,
             repeat: Infinity,
             ease: "easeInOut",
           }}
           sx={{
-            width: 84,
-            height: 84,
-            borderRadius: "26px",
-
+            width: 88,
+            height: 88,
+            borderRadius: "28px",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-
-            background:
-              "linear-gradient(135deg, rgba(37,99,235,0.10), rgba(20,184,166,0.10))",
-
-            color: "primary.main",
+            background: "linear-gradient(135deg, #2563EB, #0D9488)",
+            color: "#FFFFFF",
+            boxShadow: "0 18px 40px rgba(37,99,235,0.25)",
           }}
         >
-          <AutoAwesome
-            sx={{
-              fontSize: 38,
-            }}
-          />
+          <AutoAwesome sx={{ fontSize: 42 }} />
         </MotionBox>
 
-        {/* Main message */}
+        {/* Title */}
         <Box>
           <Typography
             variant="h2"
             sx={{
               fontSize: {
                 xs: "2.2rem",
-                sm: "3rem",
+                sm: "2.8rem",
               },
+              fontWeight: 800,
+              letterSpacing: "-0.04em",
+              color: "#0F172A",
             }}
           >
-            FlowFix is on it.
+            FlowFix Agent is on it
           </Typography>
 
-          <Box
-            sx={{
-              mt: 1.25,
-              minHeight: 30,
-              display: "flex",
-              justifyContent: "center",
-              overflow: "hidden",
-            }}
+          <Typography
+            variant="body1"
+            color="text.secondary"
+            sx={{ mt: 1, maxWidth: 500, mx: "auto" }}
           >
-            <AnimatePresence mode="wait">
-              <MotionBox
-                key={messages[messageIndex]}
-                initial={{
-                  opacity: 0,
-                  y: 8,
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                }}
-                exit={{
-                  opacity: 0,
-                  y: -8,
-                }}
-                transition={{
-                  duration: 0.35,
-                  ease: [0.22, 1, 0.36, 1],
-                }}
-              >
-                <Typography
-                  color="text.secondary"
-                >
-                  {messages[messageIndex]}
-                </Typography>
-              </MotionBox>
-            </AnimatePresence>
-          </Box>
+            Analyzing your request and scheduling the right technician.
+          </Typography>
         </Box>
 
-        {/* Minimal activity indicator */}
-        <Box
+        {/* Step-by-Step Progress Card */}
+        <Paper
+          className="customer-glass"
           sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 0.7,
-            px: 2,
-            py: 1,
-            borderRadius: 999,
-
-            background:
-              "rgba(255,255,255,0.52)",
-
-            border:
-              "1px solid rgba(255,255,255,0.68)",
-
-            backdropFilter:
-              "blur(12px)",
+            width: "100%",
+            p: 3,
+            borderRadius: "24px",
+            backgroundColor: "rgba(255, 255, 255, 0.9)",
+            border: "1px solid rgba(226, 232, 240, 0.9)",
+            textAlign: "left",
           }}
         >
-          {[0, 1, 2].map((dot) => (
-            <MotionBox
-              key={dot}
-              animate={{
-                opacity: [
-                  0.35,
-                  1,
-                  0.35,
-                ],
-                y: [0, -2, 0],
-              }}
-              transition={{
-                duration: 1.2,
-                repeat: Infinity,
-                delay: dot * 0.16,
-                ease: "easeInOut",
-              }}
-              sx={{
-                width: 5,
-                height: 5,
-                borderRadius: "50%",
-                backgroundColor:
-                  "primary.main",
-              }}
-            />
-          ))}
-        </Box>
+          <Stack spacing={2.5}>
+            {steps.map((stepItem, index) => {
+              const isCompleted = activeStep > index;
+              const isCurrent = activeStep === index;
+
+              return (
+                <Box
+                  key={stepItem.title}
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 2,
+                    p: 1.5,
+                    borderRadius: "16px",
+                    backgroundColor: isCurrent ? "rgba(37, 99, 235, 0.05)" : "transparent",
+                    transition: "all 0.3s ease",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: "12px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: isCompleted
+                        ? "rgba(16, 185, 129, 0.12)"
+                        : isCurrent
+                        ? "rgba(37, 99, 235, 0.12)"
+                        : "rgba(148, 163, 184, 0.12)",
+                      color: isCompleted
+                        ? "#10B981"
+                        : isCurrent
+                        ? "#2563EB"
+                        : "#94A3B8",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {isCompleted ? (
+                      <CheckCircle sx={{ fontSize: 22 }} />
+                    ) : isCurrent ? (
+                      <CircularProgress size={18} thickness={5} color="primary" />
+                    ) : (
+                      stepItem.icon
+                    )}
+                  </Box>
+
+                  <Box sx={{ flexGrow: 1 }}>
+                    <Typography
+                      variant="body2"
+                      fontWeight={isCurrent || isCompleted ? 700 : 500}
+                      sx={{ color: isCurrent || isCompleted ? "#0F172A" : "#64748B" }}
+                    >
+                      {stepItem.title}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {stepItem.desc}
+                    </Typography>
+                  </Box>
+                </Box>
+              );
+            })}
+          </Stack>
+        </Paper>
       </Stack>
     </Box>
   );

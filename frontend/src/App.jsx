@@ -13,10 +13,12 @@ import Requests from "./pages/Requests";
 import Appointments from "./pages/Appointments";
 import Technicians from "./pages/Technicians";
 import Customers from "./pages/Customers";
+import Agent from "./pages/Agent";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 
 import CustomerPortal from "./customer/CustomerPortal";
+
 
 function App() {
   return (
@@ -35,6 +37,7 @@ function App() {
           path="/customer-portal"
           element={<CustomerPortal />}
         />
+
 
         {/* ==================================================
             PROTECTED ADMIN ROUTES
@@ -67,6 +70,12 @@ function App() {
               element={<Customers />}
             />
 
+            <Route
+              path="/agent"
+              element={<Agent />}
+            />
+
+
             {/* Administrator-only */}
             <Route element={<AdminOnlyRoute />}>
               <Route
@@ -80,5 +89,6 @@ function App() {
     </BrowserRouter>
   );
 }
+
 
 export default App;

@@ -22,6 +22,33 @@ export function getAdminUsers() {
   return request("/admin/users");
 }
 
+export function runAgentOperation(
+  message,
+  requestId = null
+) {
+  return request(
+    "/admin/agent",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        request_id: requestId,
+        message,
+      }),
+    }
+  );
+}
+
+export function confirmCustomer(requestId, name, phone, address) {
+  return request(`/requests/${requestId}/confirm-customer`, {
+    method: "POST",
+    body: JSON.stringify({
+      name,
+      phone,
+      address,
+    }),
+  });
+}
+
 
 // ============================================================
 // HTTP REQUEST HELPER
@@ -216,6 +243,22 @@ export function provideRequestInformation(
   );
 }
 
+export function getRequestAppointmentOptions(requestId, params = {}) {
+  const queryParams = new URLSearchParams();
+  if (params.appointment_date) queryParams.set("appointment_date", params.appointment_date);
+  if (params.preferred_time) queryParams.set("preferred_time", params.preferred_time);
+  if (params.service_name) queryParams.set("service_name", params.service_name);
+  const qs = queryParams.toString();
+  return request(`/requests/${encodeURIComponent(requestId)}/appointment-options${qs ? `?${qs}` : ""}`);
+}
+
+export function adminBookAppointment(requestId, payload) {
+  return request(`/requests/${encodeURIComponent(requestId)}/admin-book`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 // ============================================================
 // APPOINTMENTS
 // ============================================================
@@ -234,6 +277,22 @@ export function getAppointments() {
 export function getTechnicians() {
   return request(
     "/technicians"
+  );
+}
+
+export function getTechnicianServices() {
+  return request(
+    "/technicians/services"
+  );
+}
+
+export function createTechnician(payload) {
+  return request(
+    "/technicians",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }
   );
 }
 

@@ -1,15 +1,23 @@
 import {
   Box,
   Button,
+  Chip,
+  Stack,
   TextField,
   Typography,
 } from "@mui/material";
+import {
+  WaterDrop,
+  VerifiedUser,
+} from "@mui/icons-material";
 
 import PortalShell from "./components/PortalShell";
 import ProgressIndicator from "./components/ProgressIndicator";
 import IssueStep from "./components/IssueStep";
 import DetailsStep from "./components/DetailsStep";
+import FollowUpStep from "./components/FollowUpStep";
 import UnderstandingStep from "./components/UnderstandingStep";
+
 import AppointmentStep from "./components/AppointmentStep";
 import NoAvailabilityStep from "./components/NoAvailabilityStep";
 import ConfirmationStep from "./components/ConfirmationStep";
@@ -21,6 +29,7 @@ import {
   createCustomerRequest,
   provideRequestInformation,
   confirmCustomerRequest,
+  confirmCustomer,
 } from "../services/api";
 
 
@@ -49,11 +58,15 @@ function CustomerPortal() {
     confirming,
     setConfirming,
 
+    confirmingCustomer,
+    setConfirmingCustomer,
+
     error,
     setError,
 
     nextStep,
     previousStep,
+    resetFlow,
   } = useCustomerFlow();
 
 
@@ -129,6 +142,46 @@ function CustomerPortal() {
   }
 
 
+  async function handleCustomerConfirmation() {
+    if (!requestResult?.request_id) {
+      return;
+    }
+
+    setError("");
+    setConfirmingCustomer(true);
+
+    try {
+      const result =
+        await confirmCustomer(
+          requestResult.request_id,
+          customerDetails.name.trim(),
+          customerDetails.phone.trim(),
+          customerDetails.address.trim()
+        );
+
+      console.log(
+        "Customer confirmation response:",
+        result
+      );
+
+      setRequestResult(result);
+
+    } catch (err) {
+      console.error(
+        "Customer confirmation failed:",
+        err
+      );
+
+      setError(
+        err.message ||
+          "We couldn't confirm your customer details."
+      );
+    } finally {
+      setConfirmingCustomer(false);
+    }
+  }
+
+
   async function handleFollowUpSubmit() {
     const answer = followUpAnswer.trim();
 
@@ -194,6 +247,7 @@ function CustomerPortal() {
       setRequestResult(result);
 
       nextStep();
+
     } catch (err) {
       console.error(
         "Appointment confirmation failed:",
@@ -220,6 +274,12 @@ function CustomerPortal() {
     previousStep();
   }
 
+  function handleEditCustomerDetails() {
+    setRequestResult(null);
+    setError("");
+    previousStep();
+  }
+
 
   const appointmentOptions =
     requestResult?.appointment_options || [];
@@ -227,6 +287,10 @@ function CustomerPortal() {
   const noAvailability =
     requestResult?.status ===
     "no_availability";
+
+  const awaitingCustomerConfirmation =
+    requestResult?.status ===
+    "awaiting_customer_confirmation";
 
 
   return (
@@ -251,36 +315,76 @@ function CustomerPortal() {
                 xs: 3,
                 md: 4,
               },
-
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
               gap: 2,
+              p: 1.5,
+              px: { xs: 2, sm: 2.5 },
+              borderRadius: "20px",
+              backgroundColor: "rgba(255, 255, 255, 0.82)",
+              backdropFilter: "blur(18px)",
+              border: "1px solid rgba(255, 255, 255, 0.9)",
+              boxShadow: "0 10px 30px -10px rgba(15, 23, 42, 0.06)",
             }}
           >
-            <Typography
-              variant="h6"
-              fontWeight={800}
-              sx={{
-                letterSpacing:
-                  "-0.02em",
-              }}
-            >
-              FlowFix
-            </Typography>
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <Box
+                sx={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: "10px",
+                  background: "linear-gradient(135deg, #2563EB, #0D9488)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#FFFFFF",
+                  boxShadow: "0 4px 12px rgba(37, 99, 235, 0.25)",
+                }}
+              >
+                <WaterDrop sx={{ fontSize: 20 }} />
+              </Box>
+              <Box>
+                <Typography
+                  variant="h6"
+                  fontWeight={850}
+                  sx={{
+                    letterSpacing: "-0.03em",
+                    color: "#0F172A",
+                    lineHeight: 1.1,
+                    fontSize: "1.1rem",
+                  }}
+                >
+                  FlowFix
+                </Typography>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{
+                    fontWeight: 600,
+                    fontSize: "0.72rem",
+                  }}
+                >
+                  Customer Self-Serve Booking
+                </Typography>
+              </Box>
+            </Stack>
 
-            <Typography
-              variant="body2"
-              color="text.secondary"
+            <Chip
+              icon={<VerifiedUser sx={{ fontSize: "16px !important", color: "#10B981 !important" }} />}
+              label="Instant Booking"
+              size="small"
               sx={{
-                display: {
-                  xs: "none",
-                  sm: "block",
-                },
+                borderRadius: 999,
+                fontSize: "0.78rem",
+                fontWeight: 700,
+                py: 0.6,
+                px: 1.25,
+                borderColor: "rgba(16, 185, 129, 0.25)",
+                color: "#065F46",
+                backgroundColor: "rgba(16, 185, 129, 0.08)",
               }}
-            >
-              Plumbing made simple.
-            </Typography>
+            />
           </Box>
 
 
@@ -324,17 +428,56 @@ function CustomerPortal() {
             {/* STEP 3 */}
             {currentStep === 3 && (
               <>
+                {/* AI PROCESSING */}
                 {submitting && (
                   <UnderstandingStep
                     error={error}
                   />
                 )}
 
+                {/* REQUEST ERROR */}
+                {!submitting && error && !requestResult && (
+                  <Box
+                    sx={{
+                      maxWidth: 620,
+                      mx: "auto",
+                      textAlign: "center",
+                      p: 4,
+                      borderRadius: "24px",
+                      backgroundColor: "rgba(255, 255, 255, 0.9)",
+                      border: "1px solid rgba(239, 68, 68, 0.2)",
+                      boxShadow: "0 20px 60px rgba(15, 23, 42, 0.08)",
+                    }}
+                  >
+                    <Typography
+                      variant="h4"
+                      fontWeight={800}
+                      color="error.main"
+                      gutterBottom
+                    >
+                      Something went wrong
+                    </Typography>
+                    <Typography
+                      color="text.secondary"
+                      sx={{ mb: 3 }}
+                    >
+                      {error}
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      onClick={previousStep}
+                      sx={{ borderRadius: "14px", fontWeight: 700 }}
+                    >
+                      Back to Edit Details
+                    </Button>
+                  </Box>
+                )}
 
-                {/* AI FOLLOW-UP QUESTION */}
+
+
+                {/* CUSTOMER IDENTITY CONFIRMATION */}
                 {!submitting &&
-                  requestResult?.status ===
-                    "awaiting_information" && (
+                  awaitingCustomerConfirmation && (
                     <Box
                       sx={{
                         maxWidth: 720,
@@ -344,8 +487,8 @@ function CustomerPortal() {
                       <Box
                         sx={{
                           p: {
-                            xs: 2,
-                            sm: 3,
+                            xs: 2.5,
+                            sm: 4,
                           },
                           borderRadius: "24px",
                           backgroundColor:
@@ -368,7 +511,7 @@ function CustomerPortal() {
                             fontWeight: 750,
                           }}
                         >
-                          We need one more detail.
+                          Let’s confirm your details.
                         </Typography>
 
                         <Typography
@@ -381,38 +524,132 @@ function CustomerPortal() {
                           {requestResult.message}
                         </Typography>
 
-                        <TextField
-                          fullWidth
-                          multiline
-                          minRows={4}
-                          value={followUpAnswer}
-                          onChange={(event) =>
-                            setFollowUpAnswer(
-                              event.target.value
-                            )
-                          }
-                          placeholder="Tell us a little more..."
-                        />
-
-                        <Button
-                          variant="contained"
-                          size="large"
-                          fullWidth
+                        <Box
                           sx={{
-                            mt: 2,
-                            borderRadius: "15px",
-                            minHeight: 52,
+                            display: "grid",
+                            gap: 1.5,
+                            mb: 3,
                           }}
-                          disabled={
-                            followUpAnswer.trim().length < 2 ||
-                            submitting
-                          }
-                          onClick={
-                            handleFollowUpSubmit
-                          }
                         >
-                          Continue
-                        </Button>
+                          <Box
+                            sx={{
+                              p: 2,
+                              borderRadius: "16px",
+                              backgroundColor:
+                                "rgba(15,23,42,0.04)",
+                            }}
+                          >
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              Name
+                            </Typography>
+
+                            <Typography
+                              fontWeight={700}
+                            >
+                              {
+                                customerDetails.name
+                              }
+                            </Typography>
+                          </Box>
+
+                          <Box
+                            sx={{
+                              p: 2,
+                              borderRadius: "16px",
+                              backgroundColor:
+                                "rgba(15,23,42,0.04)",
+                            }}
+                          >
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              Phone
+                            </Typography>
+
+                            <Typography
+                              fontWeight={700}
+                            >
+                              {
+                                customerDetails.phone
+                              }
+                            </Typography>
+                          </Box>
+
+                          <Box
+                            sx={{
+                              p: 2,
+                              borderRadius: "16px",
+                              backgroundColor:
+                                "rgba(15,23,42,0.04)",
+                            }}
+                          >
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              Address
+                            </Typography>
+
+                            <Typography
+                              fontWeight={700}
+                            >
+                              {
+                                customerDetails.address
+                              }
+                            </Typography>
+                          </Box>
+                        </Box>
+
+                        <Stack spacing={1.5} sx={{ mt: 1 }}>
+                          <Button
+                            variant="contained"
+                            size="large"
+                            fullWidth
+                            sx={{
+                              borderRadius: "15px",
+                              minHeight: 52,
+                            }}
+                            disabled={
+                              confirmingCustomer
+                            }
+                            onClick={
+                              handleCustomerConfirmation
+                            }
+                          >
+                            {confirmingCustomer
+                              ? "Confirming..."
+                              : "Yes, that's me — continue"}
+                          </Button>
+
+                          <Button
+                            variant="outlined"
+                            size="large"
+                            fullWidth
+                            sx={{
+                              borderRadius: "15px",
+                              minHeight: 46,
+                              borderColor: "rgba(15,23,42,0.18)",
+                              color: "text.primary",
+                              fontWeight: 650,
+                              "&:hover": {
+                                borderColor: "rgba(15,23,42,0.35)",
+                                backgroundColor: "rgba(15,23,42,0.04)",
+                              },
+                            }}
+                            disabled={
+                              confirmingCustomer
+                            }
+                            onClick={
+                              handleEditCustomerDetails
+                            }
+                          >
+                            No, Edit My Details
+                          </Button>
+                        </Stack>
 
                         {error && (
                           <Typography
@@ -429,8 +666,26 @@ function CustomerPortal() {
                   )}
 
 
+                {/* AI FOLLOW-UP / SCHEDULE PREFERENCE */}
+                {!submitting &&
+                  !awaitingCustomerConfirmation &&
+                  requestResult?.status ===
+                    "awaiting_information" && (
+                    <FollowUpStep
+                      message={requestResult.message}
+                      value={followUpAnswer}
+                      onChange={setFollowUpAnswer}
+                      onSubmit={handleFollowUpSubmit}
+                      submitting={submitting}
+                      error={error}
+                    />
+                  )}
+
+
+
                 {/* NO AVAILABILITY */}
                 {!submitting &&
+                  !awaitingCustomerConfirmation &&
                   noAvailability && (
                     <NoAvailabilityStep
                       message={
@@ -446,6 +701,7 @@ function CustomerPortal() {
 
                 {/* APPOINTMENT OPTIONS */}
                 {!submitting &&
+                  !awaitingCustomerConfirmation &&
                   !noAvailability &&
                   requestResult?.status !==
                     "awaiting_information" &&
@@ -476,6 +732,7 @@ function CustomerPortal() {
 
                 {/* GENERIC FALLBACK */}
                 {!submitting &&
+                  !awaitingCustomerConfirmation &&
                   !noAvailability &&
                   requestResult?.status !==
                     "awaiting_information" &&
@@ -519,6 +776,7 @@ function CustomerPortal() {
                 message={
                   requestResult?.message
                 }
+                onReset={resetFlow}
               />
             )}
           </AnimatedStep>

@@ -10,29 +10,51 @@ from ..prompts import build_request_extraction_prompt
 
 load_dotenv()
 
-api_key = os.getenv("GEMINI_API_KEY")
 
-if not api_key:
-    raise RuntimeError("GEMINI_API_KEY is not set")
+def get_gemini_client():
+    api_key = os.getenv("GEMINI_API_KEY")
 
-client = genai.Client(api_key=api_key)
+    if not api_key:
+        raise RuntimeError(
+            "GEMINI_API_KEY is not set"
+        )
+
+    return genai.Client(
+        api_key=api_key
+    )
 
 
-def extract_request(message: str, current_date: str) -> RequestExtraction:
-    prompt = build_request_extraction_prompt(current_date)
+def extract_request(
+    message: str,
+    current_date: str,
+) -> RequestExtraction:
+    prompt = build_request_extraction_prompt(
+        current_date
+    )
 
     try:
+        client = get_gemini_client()
+
         response = client.models.generate_content(
             model="gemini-2.5-flash",
-            contents=f"{prompt}\n\nCustomer message:\n{message}",
+            contents=(
+                f"{prompt}\n\n"
+                f"Customer message:\n{message}"
+            ),
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
                 response_schema=RequestExtraction,
             ),
         )
 
-        return RequestExtraction.model_validate_json(response.text)
+        return RequestExtraction.model_validate_json(
+            response.text
+        )
 
     except Exception as exc:
-        print(f"Gemini extraction failed: {exc}")
-        raise RuntimeError("LLM extraction failed") from exc
+        print(
+            f"Gemini extraction failed: {exc}"
+        )
+        raise RuntimeError(
+            "LLM extraction failed"
+        ) from exc

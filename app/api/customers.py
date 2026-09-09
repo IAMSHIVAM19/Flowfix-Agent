@@ -99,6 +99,8 @@ def list_customers(
             "address": customer.address,
             "request_count": request_count,
             "appointment_count": appointment_count,
+            "requests_count": request_count,
+            "appointments_count": appointment_count,
         }
         for (
             customer,

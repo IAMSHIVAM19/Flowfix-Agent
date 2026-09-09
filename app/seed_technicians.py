@@ -5,9 +5,10 @@ from .models_db import Service, Technician, technician_services
 
 
 TECHNICIANS = {
-    "Alex": ["tap repair", "shower repair"],
-    "John": ["toilet repair"],
-    "Sarah": ["tap repair", "leak investigation"],
+    "Alex": ["tap repair", "shower repair", "hot water system", "burst pipe repair"],
+    "John": ["toilet repair", "blocked drains", "burst pipe repair", "tap repair"],
+    "Sarah": ["leak investigation", "roof plumbing", "backflow prevention", "shower repair"],
+    "Ben": ["gas fitting", "hot water system", "blocked drains", "leak investigation"],
 }
 
 
