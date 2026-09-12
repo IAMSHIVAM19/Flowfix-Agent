@@ -6,6 +6,7 @@ import {
   LocationOn,
   EventAvailable,
   Replay,
+  ReceiptLong,
 } from "@mui/icons-material";
 import {
   Box,
@@ -82,6 +83,7 @@ function generateIcsCalendar(appointment) {
 function ConfirmationStep({
   appointment,
   message,
+  quoteEstimate,
   onReset,
 }) {
   const date = formatDate(appointment?.appointment_date);
@@ -310,6 +312,38 @@ function ConfirmationStep({
                   </Typography>
                 </Box>
               </Stack>
+
+              {/* Upfront Estimate */}
+              {quoteEstimate && (
+                <Stack direction="row" spacing={2.5} alignItems="center">
+                  <Box
+                    sx={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: "16px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: "rgba(16, 185, 129, 0.10)",
+                      color: "#10B981",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <ReceiptLong />
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                      Estimated Quote ({quoteEstimate.pricing_tier})
+                    </Typography>
+                    <Typography variant="body1" fontWeight={750} color="#0F172A">
+                      ${quoteEstimate.estimated_min} – ${quoteEstimate.estimated_max} {quoteEstimate.currency}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Includes ${quoteEstimate.callout_fee} AUD call-out & diagnostics • Pay on completion
+                    </Typography>
+                  </Box>
+                </Stack>
+              )}
 
               <Divider />
 

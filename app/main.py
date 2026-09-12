@@ -18,13 +18,29 @@ from .api.requests import router as requests_router
 from .api.technicians import (
     router as technicians_router,
 )
+from .api.technician_portal import (
+    router as technician_portal_router,
+)
 from .database import SessionLocal
 from .models_db import Service
 from .seed import seed_all
+from sqlalchemy import text
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Ensure any new columns exist safely in PostgreSQL
+    try:
+        with SessionLocal() as db:
+            db.execute(text("ALTER TABLE technicians ADD COLUMN IF NOT EXISTS phone VARCHAR(30)"))
+            db.execute(text("ALTER TABLE technicians ADD COLUMN IF NOT EXISTS pin_code VARCHAR(50) DEFAULT '1234'"))
+            db.execute(text("ALTER TABLE technicians ADD COLUMN IF NOT EXISTS status VARCHAR(30) DEFAULT 'active'"))
+            db.execute(text("ALTER TABLE appointments ADD COLUMN IF NOT EXISTS technician_notes TEXT"))
+            db.execute(text("ALTER TABLE appointments ADD COLUMN IF NOT EXISTS declined_reason TEXT"))
+            db.commit()
+    except Exception as e:
+        print(f"Notice: Column verification skipped ({e})")
+
     # Auto-seed initial catalog and technicians if the database is fresh
     try:
         with SessionLocal() as db:
@@ -79,6 +95,7 @@ app.include_router(requests_router)
 app.include_router(appointments_router)
 app.include_router(customers_router)
 app.include_router(technicians_router)
+app.include_router(technician_portal_router)
 app.include_router(dashboard_router)
 app.include_router(auth_router)
 app.include_router(admin_router)

@@ -1,6 +1,8 @@
 const API_URL = "http://127.0.0.1:8000";
 
 const TOKEN_KEY = "flowfix_admin_token";
+const TECH_TOKEN_KEY = "flowfix_tech_token";
+const TECH_USER_KEY = "flowfix_tech_user";
 
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY);
@@ -16,6 +18,39 @@ export function clearToken() {
 
 export function isAuthenticated() {
   return Boolean(getToken());
+}
+
+// ------------------------------------------------------------
+// TECHNICIAN AUTH HELPERS
+// ------------------------------------------------------------
+
+export function getTechnicianToken() {
+  return localStorage.getItem(TECH_TOKEN_KEY);
+}
+
+export function setTechnicianToken(token, techData = null) {
+  localStorage.setItem(TECH_TOKEN_KEY, token);
+  if (techData) {
+    localStorage.setItem(TECH_USER_KEY, JSON.stringify(techData));
+  }
+}
+
+export function getTechnicianUser() {
+  try {
+    const raw = localStorage.getItem(TECH_USER_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearTechnicianToken() {
+  localStorage.removeItem(TECH_TOKEN_KEY);
+  localStorage.removeItem(TECH_USER_KEY);
+}
+
+export function isTechnicianAuthenticated() {
+  return Boolean(getTechnicianToken());
 }
 
 export function getAdminUsers() {
@@ -59,7 +94,8 @@ async function request(
   options = {}
 ) {
   try {
-    const token = getToken();
+    const isTechEndpoint = endpoint.startsWith("/technician-api");
+    const token = isTechEndpoint ? getTechnicianToken() : getToken();
 
     const response = await fetch(
       `${API_URL}${endpoint}`,
@@ -104,11 +140,16 @@ async function request(
 
     if (
       response.status === 401 &&
-      endpoint !== "/auth/login"
+      endpoint !== "/auth/login" &&
+      endpoint !== "/technician-api/login"
     ) {
-      clearToken();
-
-      window.location.href = "/login";
+      if (isTechEndpoint) {
+        clearTechnicianToken();
+        window.location.href = "/technician/login";
+      } else {
+        clearToken();
+        window.location.href = "/login";
+      }
 
       return null;
     }
@@ -409,5 +450,56 @@ export function confirmCustomerRequest(
       }),
     }
   );
+}
+
+
+// ============================================================
+// TECHNICIAN PORTAL API
+// ============================================================
+
+export async function technicianLogin(usernameOrId, pin = "1234") {
+  const data = await request("/technician-api/login", {
+    method: "POST",
+    body: JSON.stringify({
+      username_or_id: String(usernameOrId),
+      pin: String(pin),
+    }),
+  });
+  setTechnicianToken(data.access_token, {
+    id: data.technician_id,
+    name: data.technician_name,
+  });
+  return data;
+}
+
+export function technicianLogout() {
+  clearTechnicianToken();
+}
+
+export function getActiveTechniciansList() {
+  return request("/technician-api/list");
+}
+
+export function getTechnicianMe() {
+  return request("/technician-api/me");
+}
+
+export function getTechnicianBookings() {
+  return request("/technician-api/bookings");
+}
+
+export function updateTechnicianBookingStatus(appointmentId, status, reason = null, notes = null) {
+  return request(`/technician-api/bookings/${encodeURIComponent(appointmentId)}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      status,
+      reason,
+      notes,
+    }),
+  });
+}
+
+export function getTechnicianSchedule() {
+  return request("/technician-api/schedule");
 }
 

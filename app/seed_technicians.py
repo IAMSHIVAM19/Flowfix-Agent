@@ -5,24 +5,53 @@ from .models_db import Service, Technician, technician_services
 
 
 TECHNICIANS = {
-    "Alex": ["tap repair", "shower repair", "hot water system", "burst pipe repair"],
-    "John": ["toilet repair", "blocked drains", "burst pipe repair", "tap repair"],
-    "Sarah": ["leak investigation", "roof plumbing", "backflow prevention", "shower repair"],
-    "Ben": ["gas fitting", "hot water system", "blocked drains", "leak investigation"],
+    "Alex": {
+        "services": ["tap repair", "shower repair", "hot water system", "burst pipe repair"],
+        "phone": "0412 889 101",
+        "pin": "1234",
+    },
+    "John": {
+        "services": ["toilet repair", "blocked drains", "burst pipe repair", "tap repair"],
+        "phone": "0423 456 789",
+        "pin": "1234",
+    },
+    "Sarah": {
+        "services": ["leak investigation", "roof plumbing", "backflow prevention", "shower repair"],
+        "phone": "0434 567 890",
+        "pin": "1234",
+    },
+    "Ben": {
+        "services": ["gas fitting", "hot water system", "blocked drains", "leak investigation"],
+        "phone": "0445 678 901",
+        "pin": "1234",
+    },
 }
 
 
 db = SessionLocal()
 
-for technician_name, service_names in TECHNICIANS.items():
+for technician_name, tech_data in TECHNICIANS.items():
+    service_names = tech_data["services"]
     technician = db.scalar(
         select(Technician).where(Technician.name == technician_name)
     )
 
     if technician is None:
-        technician = Technician(name=technician_name)
+        technician = Technician(
+            name=technician_name,
+            phone=tech_data["phone"],
+            pin_code=tech_data["pin"],
+            status="active",
+        )
         db.add(technician)
         db.flush()
+    else:
+        if not technician.phone:
+            technician.phone = tech_data["phone"]
+        if not technician.pin_code:
+            technician.pin_code = tech_data["pin"]
+        if not technician.status:
+            technician.status = "active"
 
     for service_name in service_names:
         service = db.scalar(

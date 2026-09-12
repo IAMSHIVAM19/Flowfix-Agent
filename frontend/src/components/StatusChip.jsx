@@ -18,6 +18,12 @@ const statusConfig = {
     border: "rgba(16, 185, 129, 0.25)",
     dot: "#10B981",
   },
+  awaiting_technician: {
+    bg: "rgba(239, 68, 68, 0.10)",
+    color: "#DC2626",
+    border: "rgba(239, 68, 68, 0.30)",
+    dot: "#EF4444",
+  },
   awaiting_information: {
     bg: "rgba(245, 158, 11, 0.10)",
     color: "#B45309",
@@ -59,6 +65,36 @@ const statusConfig = {
     color: "#047857",
     border: "rgba(16, 185, 129, 0.25)",
     dot: "#10B981",
+  },
+  accepted: {
+    bg: "rgba(16, 185, 129, 0.12)",
+    color: "#065F46",
+    border: "rgba(16, 185, 129, 0.35)",
+    dot: "#10B981",
+  },
+  en_route: {
+    bg: "rgba(14, 165, 233, 0.12)",
+    color: "#0369A1",
+    border: "rgba(14, 165, 233, 0.35)",
+    dot: "#0EA5E9",
+  },
+  in_progress: {
+    bg: "rgba(99, 102, 241, 0.12)",
+    color: "#4338CA",
+    border: "rgba(99, 102, 241, 0.35)",
+    dot: "#6366F1",
+  },
+  declined: {
+    bg: "rgba(239, 68, 68, 0.12)",
+    color: "#991B1B",
+    border: "rgba(239, 68, 68, 0.35)",
+    dot: "#EF4444",
+  },
+  rejected: {
+    bg: "rgba(239, 68, 68, 0.12)",
+    color: "#991B1B",
+    border: "rgba(239, 68, 68, 0.35)",
+    dot: "#EF4444",
   },
   cancelled: {
     bg: "rgba(239, 68, 68, 0.10)",

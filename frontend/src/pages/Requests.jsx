@@ -54,6 +54,7 @@ import {
   LocalFireDepartment,
   Roofing,
   Security,
+  Cancel,
 } from "@mui/icons-material";
 
 import StatusChip from "../components/StatusChip";
@@ -67,6 +68,7 @@ import {
   getCustomer,
   getRequest,
   getRequests,
+  getTechnicians,
   getRequestAppointmentOptions,
   adminBookAppointment,
   runAgentOperation,
@@ -108,6 +110,9 @@ function Requests() {
   } = useApi(getRequests);
 
   const requests = requestData || [];
+
+  const { data: techniciansData } = useApi(getTechnicians);
+  const technicians = techniciansData || [];
 
   // Filter state
   const [search, setSearch] = useState("");
@@ -553,6 +558,20 @@ function Requests() {
                 color: statusFilter === "confirmed" ? "#FFFFFF" : "#047857",
               }}
             />
+            <Chip
+              label="Awaiting Specialist"
+              size="small"
+              onClick={() => {
+                setStatusFilter(statusFilter === "awaiting_technician" ? "all" : "awaiting_technician");
+                setPage(1);
+              }}
+              sx={{
+                cursor: "pointer",
+                fontWeight: statusFilter === "awaiting_technician" ? 750 : 600,
+                backgroundColor: statusFilter === "awaiting_technician" ? "#DC2626" : "rgba(239, 68, 68, 0.08)",
+                color: statusFilter === "awaiting_technician" ? "#FFFFFF" : "#DC2626",
+              }}
+            />
           </Box>
         </Stack>
       </Paper>
@@ -874,14 +893,49 @@ function Requests() {
 
                     <Divider sx={{ my: 1.5 }} />
 
-                    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
-                      Customer Original Statement
-                    </Typography>
                     <Box sx={{ p: 1.5, borderRadius: "10px", backgroundColor: "#FFFFFF", border: "1px solid #E2E8F0" }}>
                       <Typography variant="body2" color="#334155" sx={{ fontStyle: "italic" }}>
                         "{selectedRequest.message}"
                       </Typography>
                     </Box>
+
+                    {selectedRequest.quote_estimate && (
+                      <Box
+                        sx={{
+                          mt: 1.5,
+                          p: 1.5,
+                          borderRadius: "10px",
+                          backgroundColor: "rgba(37, 99, 235, 0.05)",
+                          border: "1px solid rgba(37, 99, 235, 0.15)",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          gap: 1.5,
+                        }}
+                      >
+                        <Box>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              fontWeight: 750,
+                              color: "#2563EB",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.05em",
+                              fontSize: "0.68rem",
+                              display: "block",
+                            }}
+                          >
+                            Estimated Quote • {selectedRequest.quote_estimate.pricing_tier}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.75rem" }}>
+                            {selectedRequest.quote_estimate.description}
+                          </Typography>
+                        </Box>
+                        <Typography variant="subtitle1" fontWeight={850} color="#0F172A" sx={{ flexShrink: 0 }}>
+                          ${selectedRequest.quote_estimate.estimated_min}–${selectedRequest.quote_estimate.estimated_max} AUD
+                        </Typography>
+                      </Box>
+                    )}
                   </Paper>
 
                   {/* Appointment Booking & Dispatch Section */}
@@ -891,9 +945,9 @@ function Requests() {
                       sx={{
                         p: 2.5,
                         borderRadius: "16px",
-                        borderColor: "rgba(16, 185, 129, 0.35)",
-                        backgroundColor: "rgba(16, 185, 129, 0.03)",
-                        boxShadow: "0 4px 12px rgba(16, 185, 129, 0.06)",
+                        borderColor: selectedRequest.appointment.status === "declined" ? "rgba(239, 68, 68, 0.35)" : "rgba(16, 185, 129, 0.35)",
+                        backgroundColor: selectedRequest.appointment.status === "declined" ? "rgba(239, 68, 68, 0.03)" : "rgba(16, 185, 129, 0.03)",
+                        boxShadow: selectedRequest.appointment.status === "declined" ? "0 4px 12px rgba(239, 68, 68, 0.06)" : "0 4px 12px rgba(16, 185, 129, 0.06)",
                       }}
                     >
                       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1.5 }}>
@@ -903,26 +957,37 @@ function Requests() {
                               width: 38,
                               height: 38,
                               borderRadius: "10px",
-                              background: "linear-gradient(135deg, #059669, #10B981)",
+                              background: selectedRequest.appointment.status === "declined" ? "linear-gradient(135deg, #DC2626, #EF4444)" : "linear-gradient(135deg, #059669, #10B981)",
                               color: "#FFFFFF",
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
                             }}
                           >
-                            <EventAvailable sx={{ fontSize: 20 }} />
+                            {selectedRequest.appointment.status === "declined" ? <Cancel sx={{ fontSize: 20 }} /> : <EventAvailable sx={{ fontSize: 20 }} />}
                           </Box>
                           <Box>
                             <Typography variant="subtitle2" fontWeight={800} color="#0F172A">
-                              Confirmed Appointment
+                              {selectedRequest.appointment.status === "declined" ? "Specialist Declined Booking" : "Confirmed Appointment"}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                              Dispatched & locked on technician schedule
+                              {selectedRequest.appointment.status === "declined" ? "Awaiting specialist reassignment" : "Dispatched & locked on technician schedule"}
                             </Typography>
                           </Box>
                         </Stack>
                         <StatusChip status={selectedRequest.appointment.status || "confirmed"} size="small" />
                       </Box>
+
+                      {selectedRequest.appointment.declined_reason && (
+                        <Box sx={{ mb: 2, p: 1.5, borderRadius: "10px", backgroundColor: "rgba(239, 68, 68, 0.08)", border: "1px solid rgba(239, 68, 68, 0.2)" }}>
+                          <Typography variant="caption" fontWeight={750} color="#DC2626" sx={{ display: "block" }}>
+                            Decline Reason:
+                          </Typography>
+                          <Typography variant="body2" color="#991B1B" sx={{ fontStyle: "italic", mt: 0.25 }}>
+                            "{selectedRequest.appointment.declined_reason}"
+                          </Typography>
+                        </Box>
+                      )}
 
                       <Divider sx={{ my: 1.5 }} />
 
@@ -932,7 +997,7 @@ function Requests() {
                             Scheduled Date
                           </Typography>
                           <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mt: 0.25 }}>
-                            <CalendarMonth sx={{ fontSize: 16, color: "#059669" }} />
+                            <CalendarMonth sx={{ fontSize: 16, color: selectedRequest.appointment.status === "declined" ? "#DC2626" : "#059669" }} />
                             <Typography variant="body2" fontWeight={750} color="#0F172A">
                               {selectedRequest.appointment.appointment_date}
                             </Typography>
@@ -943,7 +1008,7 @@ function Requests() {
                             Shift Window
                           </Typography>
                           <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mt: 0.25 }}>
-                            <Schedule sx={{ fontSize: 16, color: "#059669" }} />
+                            <Schedule sx={{ fontSize: 16, color: selectedRequest.appointment.status === "declined" ? "#DC2626" : "#059669" }} />
                             <Typography variant="body2" fontWeight={750} color="#0F172A">
                               {selectedRequest.appointment.start_time} – {selectedRequest.appointment.end_time}
                             </Typography>
@@ -951,7 +1016,7 @@ function Requests() {
                         </Grid>
                         <Grid size={{ xs: 12 }}>
                           <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-                            Assigned Field Specialist
+                            {selectedRequest.appointment.status === "declined" ? "Previously Assigned Specialist" : "Assigned Field Specialist"}
                           </Typography>
                           <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
                             <Box
@@ -959,8 +1024,8 @@ function Requests() {
                                 width: 28,
                                 height: 28,
                                 borderRadius: "50%",
-                                backgroundColor: "rgba(37, 99, 235, 0.12)",
-                                color: "#2563EB",
+                                backgroundColor: selectedRequest.appointment.status === "declined" ? "rgba(239, 68, 68, 0.12)" : "rgba(37, 99, 235, 0.12)",
+                                color: selectedRequest.appointment.status === "declined" ? "#DC2626" : "#2563EB",
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
@@ -971,21 +1036,36 @@ function Requests() {
                               #{selectedRequest.appointment.technician_id}
                             </Box>
                             <Typography variant="body2" fontWeight={700} color="#0F172A">
-                              Technician #{selectedRequest.appointment.technician_id}
+                              {(() => {
+                                const techName =
+                                  selectedRequest.appointment.technician_name ||
+                                  technicians.find((t) => t.id === selectedRequest.appointment.technician_id)?.name;
+                                return techName
+                                  ? `${techName} (Technician #${selectedRequest.appointment.technician_id})`
+                                  : `Technician #${selectedRequest.appointment.technician_id}`;
+                              })()}
                             </Typography>
                           </Stack>
                         </Grid>
                       </Grid>
 
                       <Button
-                        variant="outlined"
+                        variant={selectedRequest.appointment.status === "declined" ? "contained" : "outlined"}
+                        color={selectedRequest.appointment.status === "declined" ? "primary" : "inherit"}
                         size="small"
                         fullWidth
                         startIcon={<EditCalendar />}
                         onClick={() => setIsRescheduling(true)}
-                        sx={{ borderRadius: "10px", borderColor: "#CBD5E1", textTransform: "none", fontWeight: 700 }}
+                        sx={{
+                          borderRadius: "10px",
+                          textTransform: "none",
+                          fontWeight: 750,
+                          ...(selectedRequest.appointment.status === "declined"
+                            ? { backgroundColor: "#2563EB", color: "#FFFFFF", "&:hover": { backgroundColor: "#1D4ED8" } }
+                            : { borderColor: "#CBD5E1" }),
+                        }}
                       >
-                        Reschedule or Reassign Specialist
+                        {selectedRequest.appointment.status === "declined" ? "Assign New Specialist / Re-Dispatch" : "Reschedule or Reassign Specialist"}
                       </Button>
                     </Paper>
                   ) : (

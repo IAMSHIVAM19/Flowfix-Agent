@@ -13,6 +13,9 @@ from ..models_db import (
 )
 
 
+from ..services.pricing_service import calculate_quote_estimate
+
+
 router = APIRouter(
     prefix="/appointments",
     tags=["Appointments"],
@@ -86,6 +89,12 @@ def list_appointments(
             "start_time": appointment.start_time,
             "end_time": appointment.end_time,
             "status": appointment.status,
+            "quote_estimate": calculate_quote_estimate(
+                service_request.service,
+                service_request.urgency.value if service_request.urgency else None,
+            ),
+            "technician_notes": appointment.technician_notes,
+            "declined_reason": appointment.declined_reason,
         }
         for (
             appointment,

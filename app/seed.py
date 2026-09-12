@@ -27,12 +27,23 @@ def seed_all(db=None):
         db.commit()
 
         # 2. Technicians & Specialty Capabilities
-        for tech_name, services in TECHNICIANS.items():
+        for tech_name, tech_data in TECHNICIANS.items():
+            services = tech_data["services"] if isinstance(tech_data, dict) else tech_data
+            phone = tech_data.get("phone", "0412 889 101") if isinstance(tech_data, dict) else None
+            pin = tech_data.get("pin", "1234") if isinstance(tech_data, dict) else "1234"
+
             tech = db.scalar(select(Technician).where(Technician.name == tech_name))
             if not tech:
-                tech = Technician(name=tech_name)
+                tech = Technician(name=tech_name, phone=phone, pin_code=pin, status="active")
                 db.add(tech)
                 db.flush()
+            else:
+                if phone and not getattr(tech, "phone", None):
+                    tech.phone = phone
+                if not getattr(tech, "pin_code", None):
+                    tech.pin_code = pin
+                if not getattr(tech, "status", None):
+                    tech.status = "active"
 
             for s_name in services:
                 srv = db.scalar(select(Service).where(Service.name == s_name))

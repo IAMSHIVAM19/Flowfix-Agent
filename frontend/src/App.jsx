@@ -18,6 +18,8 @@ import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 
 import CustomerPortal from "./customer/CustomerPortal";
+import TechnicianPortal from "./pages/TechnicianPortal";
+import TechnicianLogin from "./pages/TechnicianLogin";
 
 
 function App() {
@@ -36,6 +38,16 @@ function App() {
         <Route
           path="/customer-portal"
           element={<CustomerPortal />}
+        />
+
+        <Route
+          path="/technician/login"
+          element={<TechnicianLogin />}
+        />
+
+        <Route
+          path="/technician-portal"
+          element={<TechnicianPortal />}
         />
 
 

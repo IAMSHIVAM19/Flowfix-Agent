@@ -64,6 +64,15 @@ def dashboard_summary(
         )
     )
 
+    awaiting_technician = db.scalar(
+        select(
+            func.count(ServiceRequest.id)
+        ).where(
+            ServiceRequest.status
+            == RequestStatus.AWAITING_TECHNICIAN
+        )
+    )
+
     return {
         "total_requests": (
             total_requests or 0
@@ -78,6 +87,7 @@ def dashboard_summary(
             awaiting_appointment_selection or 0
         ),
         "confirmed": confirmed or 0,
+        "awaiting_technician": awaiting_technician or 0,
     }
 
 

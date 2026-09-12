@@ -726,6 +726,9 @@ function CustomerPortal() {
                       confirming={
                         confirming
                       }
+                      quoteEstimate={
+                        requestResult?.quote_estimate
+                      }
                     />
                   )}
 
@@ -775,6 +778,9 @@ function CustomerPortal() {
                 }
                 message={
                   requestResult?.message
+                }
+                quoteEstimate={
+                  requestResult?.quote_estimate
                 }
                 onReset={resetFlow}
               />

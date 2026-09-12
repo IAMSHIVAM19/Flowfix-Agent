@@ -363,7 +363,7 @@ function Sidebar({ onLogout, currentAdmin, mobileOpen, onMobileClose }) {
         </List>
       </Box>
 
-      {/* Customer Portal Shortcut Card */}
+      {/* Live Portals Shortcut Card */}
       <Box sx={{ p: 2, pt: 1 }}>
         <Box
           sx={{
@@ -374,40 +374,69 @@ function Sidebar({ onLogout, currentAdmin, mobileOpen, onMobileClose }) {
           }}
         >
           <Typography variant="caption" sx={{ color: "#94A3B8", display: "block", mb: 0.5 }}>
-            Customer Booking Portal
+            Live Platform Portals
           </Typography>
           <Typography variant="body2" fontWeight={650} sx={{ color: "#F8FAFC", mb: 1.5, fontSize: "0.82rem" }}>
-            Test self-serve customer appointment flow
+            Experience the customer & technician flows
           </Typography>
-          <Button
-            fullWidth
-            size="small"
-            variant="contained"
-            endIcon={<OpenInNew sx={{ fontSize: "14px !important", color: "#0F172A !important" }} />}
-            onClick={() => window.open("/customer-portal", "_blank")}
-            sx={{
-              backgroundColor: "#FFFFFF !important",
-              color: "#0F172A !important",
-              fontWeight: 750,
-              fontSize: "0.78rem",
-              borderRadius: "10px",
-              py: 0.8,
-              textTransform: "none",
-              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.25)",
-              transition: "all 0.15s ease",
-              "& .MuiButton-endIcon": {
+
+          <Stack spacing={1}>
+            <Button
+              fullWidth
+              size="small"
+              variant="contained"
+              endIcon={<OpenInNew sx={{ fontSize: "14px !important", color: "#0F172A !important" }} />}
+              onClick={() => window.open("/customer-portal", "_blank")}
+              sx={{
+                backgroundColor: "#FFFFFF !important",
                 color: "#0F172A !important",
-              },
-              "&:hover": {
-                backgroundColor: "#F1F5F9 !important",
-                color: "#0F172A !important",
-                boxShadow: "0 4px 14px rgba(0, 0, 0, 0.35)",
-                transform: "translateY(-1px)",
-              },
-            }}
-          >
-            Launch Portal
-          </Button>
+                fontWeight: 750,
+                fontSize: "0.78rem",
+                borderRadius: "10px",
+                py: 0.8,
+                textTransform: "none",
+                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.25)",
+                transition: "all 0.15s ease",
+                "& .MuiButton-endIcon": {
+                  color: "#0F172A !important",
+                },
+                "&:hover": {
+                  backgroundColor: "#F1F5F9 !important",
+                  color: "#0F172A !important",
+                  boxShadow: "0 4px 14px rgba(0, 0, 0, 0.35)",
+                  transform: "translateY(-1px)",
+                },
+              }}
+            >
+              Customer Portal
+            </Button>
+
+            <Button
+              fullWidth
+              size="small"
+              variant="outlined"
+              endIcon={<OpenInNew sx={{ fontSize: "14px !important" }} />}
+              onClick={() => window.open("/technician-portal", "_blank")}
+              sx={{
+                borderColor: "rgba(56, 189, 248, 0.4)",
+                backgroundColor: "rgba(56, 189, 248, 0.08)",
+                color: "#38BDF8",
+                fontWeight: 750,
+                fontSize: "0.78rem",
+                borderRadius: "10px",
+                py: 0.8,
+                textTransform: "none",
+                transition: "all 0.15s ease",
+                "&:hover": {
+                  borderColor: "#38BDF8",
+                  backgroundColor: "rgba(56, 189, 248, 0.16)",
+                  transform: "translateY(-1px)",
+                },
+              }}
+            >
+              Technician Field Portal
+            </Button>
+          </Stack>
         </Box>
       </Box>
     </Box>

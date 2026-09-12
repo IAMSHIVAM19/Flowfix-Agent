@@ -27,6 +27,7 @@ from ..models_db import (
     Notification,
     ServiceRequest,
     ServiceRequestMessage,
+    Technician,
 )
 from ..services.appointment_service import create_appointment
 from ..services.confirmation_service import confirm_appointment
@@ -50,6 +51,14 @@ from ..services.validation_service import (
     parse_natural_date_and_time,
 )
 
+
+
+from ..services.pricing_service import calculate_quote_estimate
+
+
+def _make_quote_estimate(service: str | None, urgency=None):
+    urgency_str = urgency.value if hasattr(urgency, "value") else str(urgency or "")
+    return calculate_quote_estimate(service, urgency_str)
 
 
 router = APIRouter(
@@ -114,6 +123,7 @@ def create_request(
                 f"is {request.address}."
             ),
             "appointment_options": [],
+            "quote_estimate": _make_quote_estimate(service_request.service, service_request.urgency),
         }
 
     # --------------------------------------------------------
@@ -244,6 +254,7 @@ def create_request(
             "status": service_request.status,
             "message": extraction_result.message,
             "appointment_options": [],
+            "quote_estimate": _make_quote_estimate(service_request.service, service_request.urgency),
         }
 
     # --------------------------------------------------------
@@ -272,6 +283,7 @@ def create_request(
                 )
             ),
             "appointment_options": [],
+            "quote_estimate": _make_quote_estimate(service_request.service, service_request.urgency),
         }
 
     # --------------------------------------------------------
@@ -306,6 +318,7 @@ def create_request(
             "status": service_request.status,
             "message": scheduling_result.message,
             "appointment_options": [],
+            "quote_estimate": _make_quote_estimate(service_request.service, service_request.urgency),
         }
 
     # --------------------------------------------------------
@@ -332,6 +345,7 @@ def create_request(
         "appointment_options": (
             scheduling_result.appointment_options
         ),
+        "quote_estimate": _make_quote_estimate(service_request.service, service_request.urgency),
     }
 
 
@@ -488,6 +502,7 @@ def confirm_customer(
             "status": service_request.status,
             "message": extraction_result.message,
             "appointment_options": [],
+            "quote_estimate": _make_quote_estimate(service_request.service, service_request.urgency),
         }
 
     # --------------------------------------------------------
@@ -516,6 +531,7 @@ def confirm_customer(
                 )
             ),
             "appointment_options": [],
+            "quote_estimate": _make_quote_estimate(service_request.service, service_request.urgency),
         }
 
     # --------------------------------------------------------
@@ -581,6 +597,7 @@ def confirm_customer(
             "status": service_request.status,
             "message": scheduling_result.message,
             "appointment_options": [],
+            "quote_estimate": _make_quote_estimate(service_request.service, service_request.urgency),
         }
 
     # --------------------------------------------------------
@@ -601,6 +618,7 @@ def confirm_customer(
         "appointment_options": (
             scheduling_result.appointment_options
         ),
+        "quote_estimate": _make_quote_estimate(service_request.service, service_request.urgency),
     }
 
 
@@ -867,6 +885,7 @@ def provide_information(
             "status": service_request.status,
             "message": extraction_result.message,
             "appointment_options": [],
+            "quote_estimate": _make_quote_estimate(service_request.service, service_request.urgency),
         }
 
     # --------------------------------------------------------
@@ -895,6 +914,7 @@ def provide_information(
                 )
             ),
             "appointment_options": [],
+            "quote_estimate": _make_quote_estimate(service_request.service, service_request.urgency),
         }
 
     # --------------------------------------------------------
@@ -929,6 +949,7 @@ def provide_information(
             "status": service_request.status,
             "message": scheduling_result.message,
             "appointment_options": [],
+            "quote_estimate": _make_quote_estimate(service_request.service, service_request.urgency),
         }
 
     # --------------------------------------------------------
@@ -955,6 +976,7 @@ def provide_information(
         "appointment_options": (
             scheduling_result.appointment_options
         ),
+        "quote_estimate": _make_quote_estimate(service_request.service, service_request.urgency),
     }
 
 
@@ -1044,6 +1066,7 @@ def confirm_request(
             f"{selected_option.technician_name}."
         ),
         "appointment_options": [],
+        "quote_estimate": _make_quote_estimate(service_request.service, service_request.urgency),
     }
 
 
@@ -1084,6 +1107,7 @@ def list_requests(
                 service_request.preferred_time
             ),
             "status": service_request.status,
+            "quote_estimate": _make_quote_estimate(service_request.service, service_request.urgency),
         }
         for service_request in requests
     ]
@@ -1121,6 +1145,14 @@ def get_request(
         )
     )
 
+    technician_name = None
+    if appointment is not None:
+        tech = db.scalar(
+            select(Technician).where(Technician.id == appointment.technician_id)
+        )
+        if tech:
+            technician_name = tech.name
+
     return {
         "id": service_request.id,
         "request_id": service_request.request_id,
@@ -1136,16 +1168,20 @@ def get_request(
             {
                 "id": appointment.id,
                 "technician_id": appointment.technician_id,
+                "technician_name": technician_name,
                 "appointment_date": (
                     appointment.appointment_date
                 ),
                 "start_time": appointment.start_time,
                 "end_time": appointment.end_time,
                 "status": appointment.status,
+                "declined_reason": getattr(appointment, "declined_reason", None),
+                "technician_notes": getattr(appointment, "technician_notes", None),
             }
             if appointment is not None
             else None
         ),
+        "quote_estimate": _make_quote_estimate(service_request.service, service_request.urgency),
     }
 
 
@@ -1286,6 +1322,11 @@ def admin_book_appointment(
     db.refresh(service_request)
     db.refresh(appointment)
 
+    tech = db.scalar(
+        select(Technician).where(Technician.id == appointment.technician_id)
+    )
+    technician_name = tech.name if tech else None
+
     return {
         "id": service_request.id,
         "request_id": service_request.request_id,
@@ -1300,9 +1341,13 @@ def admin_book_appointment(
         "appointment": {
             "id": appointment.id,
             "technician_id": appointment.technician_id,
+            "technician_name": technician_name,
             "appointment_date": appointment.appointment_date,
             "start_time": appointment.start_time,
             "end_time": appointment.end_time,
             "status": appointment.status,
+            "declined_reason": getattr(appointment, "declined_reason", None),
+            "technician_notes": getattr(appointment, "technician_notes", None),
         },
+        "quote_estimate": _make_quote_estimate(service_request.service, service_request.urgency),
     }

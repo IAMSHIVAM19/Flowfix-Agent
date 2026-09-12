@@ -25,6 +25,7 @@ class RequestStatus(str, Enum):
     NO_AVAILABILITY = "no_availability"
 
     CONFIRMED = "confirmed"
+    AWAITING_TECHNICIAN = "awaiting_technician"
 
 
 class RequestUrgency(str, Enum):
@@ -145,8 +146,20 @@ class AgentSchedulingResult(BaseModel):
 
 
 # ============================================================
-# REQUEST RESPONSES
-# ============================================================
+class QuoteEstimate(BaseModel):
+    service_name: str
+    urgency: str
+    pricing_tier: str
+    callout_fee: int
+    urgency_surcharge: int
+    estimated_min: int
+    estimated_max: int
+    currency: str = "AUD"
+    complexity: str
+    description: str
+    summary: str
+    is_estimate: bool = True
+
 
 class RequestResponse(BaseModel):
     request_id: str
@@ -156,6 +169,8 @@ class RequestResponse(BaseModel):
     appointment_options: list[AppointmentOption] = Field(
         default_factory=list
     )
+
+    quote_estimate: QuoteEstimate | None = None
 
 
 class ExtractionResult(BaseModel):
@@ -284,16 +299,21 @@ class RequestListItem(BaseModel):
 
     status: RequestStatus
 
+    quote_estimate: QuoteEstimate | None = None
+
 
 class RequestAppointmentDetail(BaseModel):
     id: int
     technician_id: int
+    technician_name: str | None = None
 
     appointment_date: str
     start_time: str
     end_time: str
 
     status: str
+    declined_reason: str | None = None
+    technician_notes: str | None = None
 
 
 class RequestDetailResponse(BaseModel):
@@ -312,6 +332,8 @@ class RequestDetailResponse(BaseModel):
     status: RequestStatus
 
     appointment: RequestAppointmentDetail | None = None
+
+    quote_estimate: QuoteEstimate | None = None
 
 
 # ============================================================
@@ -348,6 +370,12 @@ class AppointmentResponse(BaseModel):
     end_time: str
 
     status: str
+
+    quote_estimate: QuoteEstimate | None = None
+
+    technician_notes: str | None = None
+
+    declined_reason: str | None = None
 
 
 # ============================================================
@@ -424,6 +452,7 @@ class DashboardSummaryResponse(BaseModel):
     no_availability: int
     awaiting_appointment_selection: int
     confirmed: int
+    awaiting_technician: int = 0
 
 
 # ============================================================
@@ -474,3 +503,62 @@ class AdminUserRoleUpdateRequest(BaseModel):
     role: str = Field(
         pattern="^(admin|operations)$"
     )
+
+
+# ============================================================
+# TECHNICIAN PORTAL
+# ============================================================
+
+class TechnicianLoginRequest(BaseModel):
+    username_or_id: str
+    pin: str = "1234"
+
+
+class TechnicianLoginResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    technician_id: int
+    technician_name: str
+
+
+class TechnicianProfileResponse(BaseModel):
+    id: int
+    name: str
+    phone: str | None = None
+    services: list[str] = Field(default_factory=list)
+    status: str = "active"
+    today_jobs_count: int = 0
+    upcoming_jobs_count: int = 0
+    completed_jobs_count: int = 0
+
+
+class TechnicianBookingItem(BaseModel):
+    id: int
+    service_request_id: int
+    request_id: str | None = None
+    customer_name: str | None = None
+    customer_phone: str | None = None
+    customer_address: str | None = None
+    service: str | None = None
+    issue: str | None = None
+    urgency: str | None = None
+    appointment_date: str
+    start_time: str
+    end_time: str
+    status: str
+    quote_estimate: QuoteEstimate | None = None
+    technician_notes: str | None = None
+    declined_reason: str | None = None
+
+
+class TechnicianBookingsResponse(BaseModel):
+    up_next: TechnicianBookingItem | None = None
+    today: list[TechnicianBookingItem] = Field(default_factory=list)
+    upcoming: list[TechnicianBookingItem] = Field(default_factory=list)
+    completed: list[TechnicianBookingItem] = Field(default_factory=list)
+
+
+class TechnicianStatusUpdateRequest(BaseModel):
+    status: str = Field(pattern="^(accepted|declined|en_route|completed)$")
+    reason: str | None = None
+    notes: str | None = None

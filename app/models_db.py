@@ -53,6 +53,9 @@ class Technician(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(100))
+    phone: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    pin_code: Mapped[str | None] = mapped_column(String(50), nullable=True, default="1234")
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="active")
 
 
 class AdminUser(Base):
@@ -196,6 +199,16 @@ class Appointment(Base):
     status: Mapped[str] = mapped_column(
         String(50),
         nullable=False,
+    )
+
+    technician_notes: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    declined_reason: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
     )
 
 # ============================================================

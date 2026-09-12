@@ -543,6 +543,35 @@ function Appointments() {
                   </Stack>
                 </Paper>
 
+                {/* Quote Estimate */}
+                {selectedAppointment.quote_estimate && (
+                  <Box sx={{ p: 2, borderRadius: "14px", backgroundColor: "rgba(37, 99, 235, 0.05)", border: "1px solid rgba(37, 99, 235, 0.18)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Box>
+                      <Typography variant="caption" fontWeight={750} color="#2563EB" sx={{ textTransform: "uppercase", letterSpacing: "0.05em", display: "block" }}>
+                        Estimated Job Value • {selectedAppointment.quote_estimate.pricing_tier}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {selectedAppointment.quote_estimate.description}
+                      </Typography>
+                    </Box>
+                    <Typography variant="h6" fontWeight={850} color="#0F172A" sx={{ flexShrink: 0, ml: 2 }}>
+                      ${selectedAppointment.quote_estimate.estimated_min}–${selectedAppointment.quote_estimate.estimated_max} AUD
+                    </Typography>
+                  </Box>
+                )}
+
+                {/* Technician Declined Reason */}
+                {selectedAppointment.declined_reason && (
+                  <Box sx={{ p: 2, borderRadius: "14px", backgroundColor: "rgba(239, 68, 68, 0.08)", border: "1px solid rgba(239, 68, 68, 0.25)" }}>
+                    <Typography variant="caption" fontWeight={750} color="#DC2626" sx={{ textTransform: "uppercase", display: "block", mb: 0.25 }}>
+                      Technician Declined Reason
+                    </Typography>
+                    <Typography variant="body2" color="#991B1B">
+                      {selectedAppointment.declined_reason}
+                    </Typography>
+                  </Box>
+                )}
+
                 {/* Dispatch Note */}
                 <Box sx={{ p: 2, borderRadius: "14px", backgroundColor: "rgba(16, 185, 129, 0.05)", border: "1px solid rgba(16, 185, 129, 0.15)" }}>
                   <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>

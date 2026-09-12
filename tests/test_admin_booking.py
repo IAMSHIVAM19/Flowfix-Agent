@@ -322,6 +322,13 @@ class TestAdminBookingHttpEndpoints:
             data = book_resp.json()
             assert data["status"] == "confirmed"
             assert data["appointment"]["technician_id"] == chosen["technician_id"]
+            assert data["appointment"]["technician_name"] == chosen["technician_name"]
             assert data["appointment"]["appointment_date"] == chosen["appointment_date"]
+
+            get_resp = client.get(f"/requests/{test_request.request_id}")
+            assert get_resp.status_code == 200
+            get_data = get_resp.json()
+            assert get_data["appointment"]["technician_name"] == chosen["technician_name"]
+            assert get_data["appointment"]["technician_id"] == chosen["technician_id"]
         finally:
             app.dependency_overrides.clear()
