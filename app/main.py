@@ -24,35 +24,15 @@ from .api.technicians import (
 from .api.technician_portal import (
     router as technician_portal_router,
 )
-from .database import SessionLocal
-from .models_db import Service
-from .seed import seed_all
-from sqlalchemy import text
+from .init_db import init_database
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Ensure any new columns exist safely in PostgreSQL
     try:
-        with SessionLocal() as db:
-            db.execute(text("ALTER TABLE technicians ADD COLUMN IF NOT EXISTS phone VARCHAR(30)"))
-            db.execute(text("ALTER TABLE technicians ADD COLUMN IF NOT EXISTS pin_code VARCHAR(50) DEFAULT '1234'"))
-            db.execute(text("ALTER TABLE technicians ADD COLUMN IF NOT EXISTS status VARCHAR(30) DEFAULT 'active'"))
-            db.execute(text("ALTER TABLE appointments ADD COLUMN IF NOT EXISTS technician_notes TEXT"))
-            db.execute(text("ALTER TABLE appointments ADD COLUMN IF NOT EXISTS declined_reason TEXT"))
-            db.commit()
+        init_database()
     except Exception as e:
-        print(f"Notice: Column verification skipped ({e})")
-
-    # Auto-seed initial catalog and technicians if the database is fresh
-    try:
-        with SessionLocal() as db:
-            has_services = db.scalar(select(Service.id).limit(1))
-            if not has_services:
-                print("Fresh database detected: automatically seeding default services, technicians, and availability...")
-                seed_all(db)
-    except Exception as e:
-        print(f"Notice: Initial auto-seed check skipped ({e})")
+        print(f"Notice: Database initialization skipped ({e})")
     yield
 
 
