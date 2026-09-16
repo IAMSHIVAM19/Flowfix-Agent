@@ -44,6 +44,8 @@ function TopBar({ onMobileMenuToggle, currentAdmin, onLogout }) {
   // Derive active section name
   const pageTitles = {
     "/": "Operations Command Center",
+    "/overview": "Operations Command Center",
+    "/admin": "Operations Command Center",
     "/requests": "Service Requests",
     "/appointments": "Dispatch & Appointments",
     "/technicians": "Technician Fleet",

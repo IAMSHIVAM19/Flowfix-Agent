@@ -33,7 +33,7 @@ const drawerWidth = 260;
 const mainNavigation = [
   {
     label: "Overview",
-    path: "/",
+    path: "/overview",
     icon: <Dashboard fontSize="small" />,
     badge: null,
   },

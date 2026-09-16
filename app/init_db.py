@@ -4,9 +4,9 @@ Safely handles fresh databases (creating all tables and stamping Alembic)
 and existing databases (running incremental Alembic migrations).
 """
 import os
-from sqlalchemy import inspect
+from sqlalchemy import inspect, select
 from .database import engine, SessionLocal
-from .models_db import Base
+from .models_db import Base, Service
 from .seed import seed_all
 from .auth.create_admin import create_admin
 
@@ -15,52 +15,44 @@ def init_database():
     print("Checking database schema and tables...")
     inspector = inspect(engine)
     existing_tables = inspector.get_table_names()
+    print(f"Detected existing tables: {existing_tables}")
 
-    # If the core tables don't exist yet, bootstrap all tables via SQLAlchemy metadata
-    if "service_requests" not in existing_tables:
-        print("Fresh database detected. Bootstrapping schema with Base.metadata.create_all()...")
-        Base.metadata.create_all(bind=engine)
-        print("All database tables created successfully.")
+    # 1. Guarantee all tables exist
+    print("Ensuring all database tables exist via SQLAlchemy metadata...")
+    Base.metadata.create_all(bind=engine, checkfirst=True)
+    print("All database tables verified/created successfully.")
 
-        # Stamp Alembic at head so it tracks future incremental migrations without failing
-        try:
-            from alembic.config import Config
-            from alembic import command
-            alembic_ini_path = os.path.abspath(
-                os.path.join(os.path.dirname(__file__), "..", "alembic.ini")
-            )
-            if os.path.exists(alembic_ini_path):
-                alembic_cfg = Config(alembic_ini_path)
+    # 2. Track Alembic migrations
+    alembic_ini_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "alembic.ini")
+    )
+    if os.path.exists(alembic_ini_path):
+        from alembic.config import Config
+        from alembic import command
+        alembic_cfg = Config(alembic_ini_path)
+
+        if "alembic_version" not in existing_tables:
+            try:
                 command.stamp(alembic_cfg, "head")
                 print("Alembic schema stamped to head.")
-        except Exception as e:
-            print(f"Notice: Alembic stamp skipped ({e})")
-    else:
-        print("Existing database found. Applying any pending Alembic migrations...")
-        try:
-            from alembic.config import Config
-            from alembic import command
-            alembic_ini_path = os.path.abspath(
-                os.path.join(os.path.dirname(__file__), "..", "alembic.ini")
-            )
-            if os.path.exists(alembic_ini_path):
-                alembic_cfg = Config(alembic_ini_path)
+            except Exception as e:
+                print(f"Notice: Alembic stamp skipped ({e})")
+        else:
+            try:
                 command.upgrade(alembic_cfg, "head")
                 print("Alembic migrations completed successfully.")
-        except Exception as e:
-            print(f"Notice: Alembic upgrade skipped ({e})")
+            except Exception as e:
+                print(f"Notice: Alembic upgrade skipped ({e})")
 
-    # Ensure admin user exists
+    # 3. Ensure default admin user exists
     try:
         create_admin()
     except Exception as e:
         print(f"Notice: Admin creation skipped ({e})")
 
-    # Auto-seed initial catalog, technicians, and availability if unseeded
+    # 4. Auto-seed initial catalog, technicians, and availability if unseeded
     try:
         with SessionLocal() as db:
-            from sqlalchemy import select
-            from .models_db import Service
             has_services = db.scalar(select(Service.id).limit(1))
             if not has_services:
                 print("Seeding initial services, technicians, and availability...")

@@ -18,18 +18,27 @@ SERVICES = [
 ]
 
 
-db = SessionLocal()
+def seed_services_table(db=None):
+    close_db = False
+    if db is None:
+        db = SessionLocal()
+        close_db = True
 
-for service_name in SERVICES:
-    existing_service = db.scalar(
-        select(Service).where(Service.name == service_name)
-    )
+    try:
+        for service_name in SERVICES:
+            existing_service = db.scalar(
+                select(Service).where(Service.name == service_name)
+            )
 
-    if not existing_service:
-        db.add(Service(name=service_name))
+            if not existing_service:
+                db.add(Service(name=service_name))
 
-db.commit()
+        db.commit()
+        print("Service catalogue seeded successfully.")
+    finally:
+        if close_db:
+            db.close()
 
-print("Service catalogue seeded successfully.")
 
-db.close()
+if __name__ == "__main__":
+    seed_services_table()

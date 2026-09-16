@@ -28,57 +28,67 @@ TECHNICIANS = {
 }
 
 
-db = SessionLocal()
+def seed_technicians_table(db=None):
+    close_db = False
+    if db is None:
+        db = SessionLocal()
+        close_db = True
 
-for technician_name, tech_data in TECHNICIANS.items():
-    service_names = tech_data["services"]
-    technician = db.scalar(
-        select(Technician).where(Technician.name == technician_name)
-    )
-
-    if technician is None:
-        technician = Technician(
-            name=technician_name,
-            phone=tech_data["phone"],
-            pin_code=tech_data["pin"],
-            status="active",
-        )
-        db.add(technician)
-        db.flush()
-    else:
-        if not technician.phone:
-            technician.phone = tech_data["phone"]
-        if not technician.pin_code:
-            technician.pin_code = tech_data["pin"]
-        if not technician.status:
-            technician.status = "active"
-
-    for service_name in service_names:
-        service = db.scalar(
-            select(Service).where(Service.name == service_name)
-        )
-
-        if service is None:
-            raise RuntimeError(
-                f"Service '{service_name}' does not exist."
+    try:
+        for technician_name, tech_data in TECHNICIANS.items():
+            service_names = tech_data["services"]
+            technician = db.scalar(
+                select(Technician).where(Technician.name == technician_name)
             )
 
-        relationship_exists = db.execute(
-            select(technician_services).where(
-                technician_services.c.technician_id == technician.id,
-                technician_services.c.service_id == service.id,
-            )
-        ).first()
-
-        if relationship_exists is None:
-            db.execute(
-                technician_services.insert().values(
-                    technician_id=technician.id,
-                    service_id=service.id,
+            if technician is None:
+                technician = Technician(
+                    name=technician_name,
+                    phone=tech_data["phone"],
+                    pin_code=tech_data["pin"],
+                    status="active",
                 )
-            )
+                db.add(technician)
+                db.flush()
+            else:
+                if not technician.phone:
+                    technician.phone = tech_data["phone"]
+                if not technician.pin_code:
+                    technician.pin_code = tech_data["pin"]
+                if not technician.status:
+                    technician.status = "active"
 
-db.commit()
-db.close()
+            for service_name in service_names:
+                service = db.scalar(
+                    select(Service).where(Service.name == service_name)
+                )
 
-print("Technician catalogue seeded successfully.")
+                if service is None:
+                    raise RuntimeError(
+                        f"Service '{service_name}' does not exist."
+                    )
+
+                relationship_exists = db.execute(
+                    select(technician_services).where(
+                        technician_services.c.technician_id == technician.id,
+                        technician_services.c.service_id == service.id,
+                    )
+                ).first()
+
+                if relationship_exists is None:
+                    db.execute(
+                        technician_services.insert().values(
+                            technician_id=technician.id,
+                            service_id=service.id,
+                        )
+                    )
+
+        db.commit()
+        print("Technician catalogue seeded successfully.")
+    finally:
+        if close_db:
+            db.close()
+
+
+if __name__ == "__main__":
+    seed_technicians_table()

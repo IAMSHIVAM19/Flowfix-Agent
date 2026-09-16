@@ -31,13 +31,18 @@ function App() {
         ================================================== */}
 
         <Route
-          path="/login"
-          element={<Login />}
+          path="/"
+          element={<CustomerPortal />}
         />
 
         <Route
           path="/customer-portal"
           element={<CustomerPortal />}
+        />
+
+        <Route
+          path="/login"
+          element={<Login />}
         />
 
         <Route
@@ -58,7 +63,12 @@ function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<AdminLayout />}>
             <Route
-              path="/"
+              path="/overview"
+              element={<Overview />}
+            />
+
+            <Route
+              path="/admin"
               element={<Overview />}
             />
 

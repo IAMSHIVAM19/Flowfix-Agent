@@ -92,8 +92,8 @@ Once deployed, you can access your hosted application:
 
 | Portal | URL Path | Credentials |
 | :--- | :--- | :--- |
-| **Operations Command Center** | `/` | Username: `admin`<br>Password: `change-me-now` |
-| **Field Technician Portal** | `/technician/login` | Name: `Alex`, `John`, `Sarah`<br>PIN: `1234` |
-| **Customer Self-Serve Intake** | `/customer-portal` | Public access (no login required) |
+| **Customer Self-Serve Intake** | `/` (or `/customer-portal`) | Public access (no login required) |
+| **Operations Command Center** | `/overview` (or `/login`) | Username: `admin`<br>Password: `change-me-now` |
+| **Field Technician Portal** | `/technician/login` | Enter Name & PIN (`1234`) |
 | **API Documentation** | `/docs` | Interactive Swagger UI |
 | **Health Check** | `/health` | JSON status endpoint |

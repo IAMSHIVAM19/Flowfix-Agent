@@ -37,7 +37,7 @@ function Login() {
       setError("");
 
       await login(username, password);
-      navigate("/", { replace: true });
+      navigate("/overview", { replace: true });
     } catch (err) {
       const message = err?.message || "Unable to sign in.";
 
