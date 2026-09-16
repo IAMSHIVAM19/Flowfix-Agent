@@ -59,6 +59,15 @@ class FlowFixAgent:
             name=name,
         )
 
+    def list_customers(
+        self,
+        limit: int = 50,
+    ) -> list[dict]:
+        return TOOLS["list_customers"](
+            db=self.db,
+            limit=limit,
+        )
+
     def search_customers(
         self,
         query: str = "",
@@ -645,10 +654,28 @@ class FlowFixAgent:
                     )
 
         # ----------------------------------------------------
-        # Handle full customer listing queries
-        # ----------------------------------------------------
-        if any(kw in normalized_message for kw in ("list all customers", "show all customers", "list customers", "show customers", "view customers")):
-            all_custs = self.search_customers("")
+        customer_list_phrases = (
+            "list all customers",
+            "list all the customers",
+            "list the customers",
+            "list customers",
+            "show all customers",
+            "show all the customers",
+            "show the customers",
+            "show customers",
+            "view all customers",
+            "view all the customers",
+            "view customers",
+            "get all customers",
+            "get all the customers",
+            "all the customers",
+            "all customers",
+        )
+        is_list_customers_query = any(kw in normalized_message for kw in customer_list_phrases) or (
+            "customer" in normalized_message and any(action in normalized_message for action in ("list", "show all", "view all", "display all", "fetch all"))
+        )
+        if is_list_customers_query:
+            all_custs = self.list_customers()
             if not all_custs:
                 msg = "There are currently no customers in the database."
             else:
@@ -661,8 +688,8 @@ class FlowFixAgent:
                 message=msg,
                 tool_calls=[
                     AgentToolCall(
-                        tool_name="search_customers",
-                        arguments={"query": ""},
+                        tool_name="list_customers",
+                        arguments={},
                         result=all_custs,
                     )
                 ],

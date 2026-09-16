@@ -1,6 +1,6 @@
 from google.genai import types
 
-from .customer_tools import get_customer, search_customers
+from .customer_tools import get_customer, list_customers, search_customers
 from .scheduling_tools import (
     check_availability,
     create_booking,
@@ -13,6 +13,7 @@ from .scheduling_tools import (
 
 TOOLS = {
     "get_customer": get_customer,
+    "list_customers": list_customers,
     "search_customers": search_customers,
     "check_availability": check_availability,
     "list_appointments": list_appointments,
@@ -26,6 +27,7 @@ TOOLS = {
 # Tools the agent may use without an explicit customer action.
 READ_ONLY_TOOLS = {
     "get_customer",
+    "list_customers",
     "search_customers",
     "check_availability",
     "list_appointments",
@@ -67,11 +69,28 @@ TOOL_SCHEMAS = {
         },
     },
 
+    "list_customers": {
+        "name": "list_customers",
+        "description": (
+            "List all existing FlowFix customers currently stored in the database "
+            "with their names, phone numbers, and service addresses."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer",
+                    "description": "Maximum number of customers to retrieve (default 20).",
+                },
+            },
+        },
+    },
+
     "search_customers": {
         "name": "search_customers",
         "description": (
             "Search for existing FlowFix customers in the database by "
-            "name, phone number, or address keyword."
+            "name, phone number, or address keyword, or leave blank to list customers."
         ),
         "parameters": {
             "type": "object",
@@ -83,7 +102,6 @@ TOOL_SCHEMAS = {
                     ),
                 },
             },
-            "required": ["query"],
         },
     },
 

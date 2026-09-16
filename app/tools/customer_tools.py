@@ -83,3 +83,23 @@ def search_customers(
         }
         for c in customers
     ]
+
+
+def list_customers(
+    db: Session,
+    limit: int = 50,
+) -> list[dict]:
+    """
+    List all registered FlowFix customers from the database.
+    """
+    stmt = select(Customer).order_by(Customer.id).limit(limit)
+    customers = db.scalars(stmt).all()
+    return [
+        {
+            "customer_id": c.id,
+            "name": c.name,
+            "phone": c.phone,
+            "address": c.address,
+        }
+        for c in customers
+    ]

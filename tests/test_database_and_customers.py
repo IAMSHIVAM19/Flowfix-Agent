@@ -83,3 +83,19 @@ class TestCustomerDatabaseOperations:
         assert "Chloe" in res2.message
         assert len(res2.tool_calls) == 1
         assert res2.tool_calls[0].tool_name == "search_customers"
+
+    def test_list_customers_tool_and_phrasings(self, db):
+        from app.tools.customer_tools import list_customers
+        from app.agent.flowfix_agent import FlowFixAgent
+
+        customers = list_customers(db=db, limit=10)
+        assert len(customers) > 0
+        assert "name" in customers[0]
+        assert "phone" in customers[0]
+
+        agent = FlowFixAgent(db)
+        res = agent.run_operation(message="list all the customers")
+        assert res.status == "completed"
+        assert "customer(s) in the database" in res.message
+        assert len(res.tool_calls) == 1
+        assert res.tool_calls[0].tool_name == "list_customers"
