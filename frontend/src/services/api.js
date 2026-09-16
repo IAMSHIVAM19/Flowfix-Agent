@@ -1,4 +1,7 @@
-const API_URL = "http://127.0.0.1:8000";
+const RAW_API_URL = import.meta.env.VITE_API_URL;
+const API_URL = RAW_API_URL !== undefined
+  ? RAW_API_URL.replace(/\/+$/, "")
+  : (import.meta.env.DEV ? "http://127.0.0.1:8000" : "");
 
 const TOKEN_KEY = "flowfix_admin_token";
 const TECH_TOKEN_KEY = "flowfix_tech_token";

@@ -1,6 +1,9 @@
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
 
 from .api.admin import router as admin_router
@@ -75,13 +78,26 @@ async def global_exception_handler(request, exc):
 # CORS
 # ============================================================
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
+cors_origins_raw = os.getenv("CORS_ORIGINS", "").strip()
+if cors_origins_raw == "*":
+    allow_origins = ["*"]
+    allow_credentials = False
+elif cors_origins_raw:
+    allow_origins = [o.strip() for o in cors_origins_raw.split(",") if o.strip()]
+    allow_credentials = True
+else:
+    allow_origins = [
         "http://localhost:5173",
         "http://localhost:5174",
-    ],
-    allow_credentials=True,
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+    ]
+    allow_credentials = True
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allow_origins,
+    allow_credentials=allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -105,8 +121,37 @@ app.include_router(admin_router)
 # HEALTH CHECK
 # ============================================================
 
-@app.get("/")
-def home():
+@app.get("/health")
+def health_check():
     return {
-        "message": "FlowFix API is running"
+        "status": "ok",
+        "message": "FlowFix API is running",
     }
+
+
+# ============================================================
+# FRONTEND SPA STATIC SERVING (Unified Deployment)
+# ============================================================
+
+frontend_dist = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+)
+
+if os.path.isdir(frontend_dist):
+    assets_dir = os.path.join(frontend_dist, "assets")
+    if os.path.isdir(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        target = os.path.join(frontend_dist, full_path)
+        if full_path and os.path.isfile(target):
+            return FileResponse(target)
+        return FileResponse(os.path.join(frontend_dist, "index.html"))
+else:
+    @app.get("/")
+    def home():
+        return {
+            "message": "FlowFix API is running",
+            "docs": "/docs",
+        }
