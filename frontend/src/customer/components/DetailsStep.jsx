@@ -13,6 +13,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import AddressAutocomplete from "./AddressAutocomplete";
 
 function DetailsStep({
   details,
@@ -120,20 +121,15 @@ function DetailsStep({
               }}
             />
 
-            <TextField
+            <AddressAutocomplete
               label="Service Address"
               placeholder="e.g. 142 George Street, Sydney NSW 2000"
               value={details.address}
-              onChange={updateField("address")}
-              autoComplete="street-address"
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <LocationOn sx={{ color: "#94A3B8" }} />
-                    </InputAdornment>
-                  ),
-                },
+              onChange={(newAddress) => {
+                onChange({
+                  ...details,
+                  address: newAddress,
+                });
               }}
             />
 
