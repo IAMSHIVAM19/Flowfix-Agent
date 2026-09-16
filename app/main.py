@@ -1,6 +1,6 @@
 import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -84,6 +84,45 @@ app.add_middleware(
 
 
 # ============================================================
+# FRONTEND SPA BROWSER REFRESH NAVIGATION MIDDLEWARE
+# ============================================================
+
+frontend_dist = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+)
+
+@app.middleware("http")
+async def spa_navigation_middleware(request: Request, call_next):
+    # When a user reloads or navigates directly to an SPA page in the browser
+    # (e.g. /requests, /appointments, /customers), the browser sends Accept: text/html
+    # or Sec-Fetch-Dest: document. We must serve index.html instead of returning 401 JSON.
+    if request.method == "GET" and os.path.isdir(frontend_dist):
+        path = request.url.path
+        accept = request.headers.get("accept", "")
+        dest = request.headers.get("sec-fetch-dest", "")
+
+        excluded_prefixes = (
+            "/docs",
+            "/redoc",
+            "/openapi.json",
+            "/health",
+            "/assets",
+            "/favicon",
+        )
+
+        if not path.startswith(excluded_prefixes):
+            if dest == "document" or "text/html" in accept:
+                target = os.path.join(frontend_dist, path.lstrip("/"))
+                if path != "/" and os.path.isfile(target):
+                    return FileResponse(target)
+                index_file = os.path.join(frontend_dist, "index.html")
+                if os.path.isfile(index_file):
+                    return FileResponse(index_file)
+
+    return await call_next(request)
+
+
+# ============================================================
 # API ROUTERS
 # ============================================================
 
@@ -112,10 +151,6 @@ def health_check():
 # ============================================================
 # FRONTEND SPA STATIC SERVING (Unified Deployment)
 # ============================================================
-
-frontend_dist = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
-)
 
 if os.path.isdir(frontend_dist):
     assets_dir = os.path.join(frontend_dist, "assets")

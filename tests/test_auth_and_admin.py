@@ -63,3 +63,28 @@ class TestAdminAgentValidation:
             run_agent_operation(operation=req, db=db)
         assert exc_info.value.status_code == 404
         assert "not found" in exc_info.value.detail
+
+
+class TestSPAReloadRouting:
+    def test_browser_page_reload_serves_spa_html(self):
+        from fastapi.testclient import TestClient
+        from app.main import app
+
+        client = TestClient(app)
+        # Browser navigating or reloading sends text/html in Accept header
+        res = client.get(
+            "/requests",
+            headers={"accept": "text/html,application/xhtml+xml", "sec-fetch-dest": "document"},
+        )
+        assert res.status_code == 200
+        assert "text/html" in res.headers.get("content-type", "")
+
+    def test_api_request_without_auth_returns_401(self):
+        from fastapi.testclient import TestClient
+        from app.main import app
+
+        client = TestClient(app)
+        # Direct API fetch request without credentials should fail with 401 Not authenticated
+        res = client.get("/requests")
+        assert res.status_code == 401
+        assert res.json().get("detail") == "Not authenticated"
