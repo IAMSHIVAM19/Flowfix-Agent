@@ -89,7 +89,7 @@ function Technicians() {
     execute: loadTechnicians,
   } = useApi(getTechnicians);
 
-  const technicians = technicianData || [];
+  const technicians = Array.isArray(technicianData) ? technicianData : [];
 
   const [selectedTechnician, setSelectedTechnician] = useState(null);
   const [availability, setAvailability] = useState([]);

@@ -2,6 +2,7 @@ import re
 from datetime import date, datetime, time, timedelta
 
 from ..models import RequestExtraction
+from ..utils.timezone import get_current_date, get_current_datetime, get_current_time
 
 
 def get_earliest_slot_for_flexible_time(
@@ -10,12 +11,12 @@ def get_earliest_slot_for_flexible_time(
 ) -> tuple[str, str]:
     """
     Given the current time of day, calculate the earliest bookable (date, time_slot).
-    - If before 09:00: today morning
-    - If 09:00 <= now < 13:00: today afternoon
-    - If >= 13:00: tomorrow morning
+    - If before 09:00: today morning (09:00 - 12:00)
+    - If 09:00 <= now < 13:00: today afternoon (13:00 - 17:00)
+    - If >= 13:00: tomorrow morning (09:00 - 12:00)
     """
     if now_time is None:
-        now_time = datetime.now().time()
+        now_time = get_current_time()
 
     if now_time < time(9, 0):
         return current_date.isoformat(), "morning"
@@ -164,8 +165,18 @@ def parse_natural_date_and_time(
             extracted_date = (current_date + timedelta(days=2)).isoformat()
         elif "tomorrow" in normalized:
             extracted_date = (current_date + timedelta(days=1)).isoformat()
-        elif any(w in normalized for w in ["today", "right now", "immediately", "asap", "urgent"]):
+        elif "today" in normalized:
             extracted_date = current_date.isoformat()
+        elif any(w in normalized for w in ["right now", "immediately", "asap", "urgent", "now"]):
+            effective_time = now_time
+            if effective_time is None and current_date == get_current_date():
+                effective_time = get_current_time()
+            if effective_time is not None:
+                earliest_d, earliest_s = get_earliest_slot_for_flexible_time(current_date, effective_time)
+                extracted_date = earliest_d
+                extracted_time = earliest_s
+            else:
+                extracted_date = current_date.isoformat()
 
     # Weekday keywords (check both full names and abbreviations)
     for w_name, w_idx in WEEKDAY_NAMES.items():
@@ -202,7 +213,14 @@ def parse_natural_date_and_time(
     if extracted_time is None:
         for kw in flexible_keywords:
             if kw in normalized:
-                extracted_time = "morning"
+                effective_time = now_time
+                if effective_time is None and current_date == get_current_date():
+                    effective_time = get_current_time()
+                if effective_time is not None:
+                    _, earliest_s = get_earliest_slot_for_flexible_time(current_date, effective_time)
+                    extracted_time = earliest_s
+                else:
+                    extracted_time = "morning"
                 break
 
     return extracted_date, extracted_weekday, extracted_time
@@ -210,6 +228,8 @@ def parse_natural_date_and_time(
 
 def normalize_preferred_time(
     preferred_time: str | None,
+    current_date: date | None = None,
+    now_time: time | None = None,
 ) -> str | None:
     if preferred_time is None:
         return None
@@ -223,7 +243,9 @@ def normalize_preferred_time(
         return "afternoon"
 
     if norm in {"now", "immediately", "asap", "right now", "any time", "anytime", "whenever", "first available", "any slot", "urgent"}:
-        return "morning"
+        c_date = current_date or get_current_date()
+        _, earliest_s = get_earliest_slot_for_flexible_time(c_date, now_time)
+        return earliest_s
 
     return preferred_time
 
@@ -233,6 +255,7 @@ def normalize_preferred_date(
     preferred_time: str | None,
     preferred_weekday: str | None,
     current_date: date,
+    now_time: time | None = None,
 ) -> str | None:
     if preferred_date is not None:
         norm_date = preferred_date.strip().lower()
@@ -248,7 +271,7 @@ def normalize_preferred_date(
             date.fromisoformat(norm_date)
             return norm_date
         except ValueError:
-            parsed_d, _, _ = parse_natural_date_and_time(norm_date, current_date)
+            parsed_d, _, _ = parse_natural_date_and_time(norm_date, current_date, now_time)
             if parsed_d:
                 return parsed_d
             return preferred_date
@@ -260,9 +283,12 @@ def normalize_preferred_date(
         "immediately",
         "asap",
         "right now",
-        "today",
         "urgent",
     }:
+        earliest_d, _ = get_earliest_slot_for_flexible_time(current_date, now_time)
+        return earliest_d
+
+    if time_lower == "today":
         return current_date.isoformat()
 
     if time_lower == "tomorrow":
@@ -380,13 +406,18 @@ def date_matches_weekday(
 def normalize_extraction_date(
     extraction: RequestExtraction,
     current_date: date,
+    now_time: time | None = None,
 ) -> RequestExtraction:
+    if now_time is None and current_date == get_current_date():
+        now_time = get_current_time()
+
     # 1. Normalize date
     normalized_date = normalize_preferred_date(
         preferred_date=extraction.preferred_date,
         preferred_time=extraction.preferred_time,
         preferred_weekday=extraction.preferred_weekday,
         current_date=current_date,
+        now_time=now_time,
     )
 
     if normalized_date is not None:
@@ -400,7 +431,9 @@ def normalize_extraction_date(
     # 2. Normalize time slot
     if extraction.preferred_time is not None:
         norm_time = normalize_preferred_time(
-            extraction.preferred_time
+            extraction.preferred_time,
+            current_date=current_date,
+            now_time=now_time,
         )
         if norm_time:
             extraction.preferred_time = norm_time

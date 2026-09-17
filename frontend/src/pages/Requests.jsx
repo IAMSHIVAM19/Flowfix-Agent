@@ -109,10 +109,10 @@ function Requests() {
     execute: loadRequests,
   } = useApi(getRequests);
 
-  const requests = requestData || [];
+  const requests = Array.isArray(requestData) ? requestData : [];
 
   const { data: techniciansData } = useApi(getTechnicians);
-  const technicians = techniciansData || [];
+  const technicians = Array.isArray(techniciansData) ? techniciansData : [];
 
   // Filter state
   const [search, setSearch] = useState("");

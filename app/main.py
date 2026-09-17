@@ -100,6 +100,8 @@ async def spa_navigation_middleware(request: Request, call_next):
         path = request.url.path
         accept = request.headers.get("accept", "")
         dest = request.headers.get("sec-fetch-dest", "")
+        sec_mode = request.headers.get("sec-fetch-mode", "")
+        auth = request.headers.get("authorization", "")
 
         excluded_prefixes = (
             "/docs",
@@ -110,8 +112,25 @@ async def spa_navigation_middleware(request: Request, call_next):
             "/favicon",
         )
 
-        if not path.startswith(excluded_prefixes):
-            if dest == "document" or "text/html" in accept:
+        # Never intercept API calls:
+        # - Calls with Authorization header (e.g. admin or technician bearer tokens)
+        # - Calls requesting application/json
+        # - Programmatic fetch/XHR requests (sec-fetch-mode is cors/same-origin with dest != document)
+        # - Calls with X-Requested-With header
+        is_api_request = (
+            bool(auth)
+            or "application/json" in accept
+            or (sec_mode in ("cors", "same-origin") and dest != "document")
+            or request.headers.get("x-requested-with") == "XMLHttpRequest"
+        )
+
+        if not path.startswith(excluded_prefixes) and not is_api_request:
+            is_browser_nav = (
+                dest == "document"
+                or sec_mode == "navigate"
+                or "text/html" in accept
+            )
+            if is_browser_nav:
                 target = os.path.join(frontend_dist, path.lstrip("/"))
                 if path != "/" and os.path.isfile(target):
                     return FileResponse(target)

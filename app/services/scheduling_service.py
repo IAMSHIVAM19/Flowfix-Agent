@@ -12,6 +12,7 @@ from ..models_db import (
     TechnicianAvailability,
     technician_services,
 )
+from ..utils.timezone import get_current_datetime
 from .service_validation import normalize_service_name
 
 
@@ -30,7 +31,7 @@ def is_slot_in_past(
     Check whether a given appointment slot has already passed or started.
     """
     if now is None:
-        now = datetime.now()
+        now = get_current_datetime()
 
     today_str = now.date().isoformat()
 

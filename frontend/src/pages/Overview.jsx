@@ -93,12 +93,12 @@ function Overview() {
   } = useApi(getTechnicians);
 
   const summary = summaryData;
-  const requests = requestData || [];
-  const appointments = appointmentData || [];
-  const technicians = technicianData || [];
+  const requests = Array.isArray(requestData) ? requestData : [];
+  const appointments = Array.isArray(appointmentData) ? appointmentData : [];
+  const technicians = Array.isArray(technicianData) ? technicianData : [];
 
   useEffect(() => {
-    setNotifications(notificationData || []);
+    setNotifications(Array.isArray(notificationData) ? notificationData : []);
   }, [notificationData]);
 
   const loading =

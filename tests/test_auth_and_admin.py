@@ -88,3 +88,25 @@ class TestSPAReloadRouting:
         res = client.get("/requests")
         assert res.status_code == 401
         assert res.json().get("detail") == "Not authenticated"
+
+    def test_authenticated_api_request_returns_json_not_html(self):
+        from fastapi.testclient import TestClient
+        from app.main import app
+        from app.auth.security import create_access_token
+
+        client = TestClient(app)
+        token = create_access_token(subject="admin")
+        for route in ["/requests", "/appointments", "/technicians", "/customers"]:
+            res = client.get(
+                route,
+                headers={
+                    "authorization": f"Bearer {token}",
+                    "accept": "application/json",
+                    "sec-fetch-mode": "cors",
+                    "sec-fetch-dest": "empty",
+                },
+            )
+            assert res.status_code == 200, f"Failed for {route}: {res.text}"
+            assert "application/json" in res.headers.get("content-type", "")
+            assert isinstance(res.json(), list), f"Expected list response for {route}, got {res.json()}"
+

@@ -3,6 +3,7 @@ from datetime import date
 from sqlalchemy.orm import Session
 
 from ..models import ExtractionResult, RequestExtraction
+from ..utils.timezone import get_current_date
 from .service_validation import (
     get_service_by_name,
     normalize_service_name,
@@ -43,7 +44,7 @@ def process_extraction(
 
     extraction = normalize_extraction_date(
         extraction=extraction,
-        current_date=date.today(),
+        current_date=get_current_date(),
     )
 
     # ------------------------------------------------------------
@@ -71,7 +72,7 @@ def process_extraction(
 
     missing_fields = get_missing_fields(
         extraction=extraction,
-        current_date=date.today(),
+        current_date=get_current_date(),
     )
 
     if missing_fields:

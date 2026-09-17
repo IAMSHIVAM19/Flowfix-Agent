@@ -65,7 +65,7 @@ function Appointments() {
     execute: loadAppointments,
   } = useApi(getAppointments);
 
-  const appointments = appointmentData || [];
+  const appointments = Array.isArray(appointmentData) ? appointmentData : [];
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");

@@ -52,7 +52,7 @@ function Customers() {
     execute: loadCustomers,
   } = useApi(getCustomers);
 
-  const customers = customerData || [];
+  const customers = Array.isArray(customerData) ? customerData : [];
 
   const [search, setSearch] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState(null);

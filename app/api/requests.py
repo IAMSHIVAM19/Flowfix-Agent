@@ -47,8 +47,14 @@ from ..services.scheduling_service import (
 )
 from ..services.service_validation import normalize_service_name
 from ..services.validation_service import (
+    get_earliest_slot_for_flexible_time,
     get_next_weekday_date,
     parse_natural_date_and_time,
+)
+from ..utils.timezone import (
+    get_current_date,
+    get_current_datetime,
+    get_current_time,
 )
 
 
@@ -130,14 +136,18 @@ def create_request(
     # AI / mock extraction
     # --------------------------------------------------------
 
+    current_d = get_current_date()
+    current_t = get_current_time()
+
     extraction = get_extraction(
         message=request.message,
-        current_date=date.today(),
+        current_date=current_d,
     )
 
     parsed_date, parsed_weekday, parsed_time = parse_natural_date_and_time(
         request.message,
-        current_date=date.today(),
+        current_date=current_d,
+        now_time=current_t,
     )
     if extraction.preferred_date is None and parsed_date:
         extraction.preferred_date = parsed_date
@@ -427,17 +437,18 @@ def confirm_customer(
         )
     )
 
-    # Re-run the normal request pipeline now that the customer
-    # identity has been confirmed. The original service request
-    # is reused; no duplicate request is created.
+    current_d = get_current_date()
+    current_t = get_current_time()
+
     extraction = get_extraction(
         message=service_request.message,
-        current_date=date.today(),
+        current_date=current_d,
     )
 
     parsed_date, parsed_weekday, parsed_time = parse_natural_date_and_time(
         service_request.message,
-        current_date=date.today(),
+        current_date=current_d,
+        now_time=current_t,
     )
     if extraction.preferred_date is None and parsed_date:
         extraction.preferred_date = parsed_date
@@ -720,9 +731,12 @@ def provide_information(
         f"{answer}"
     )
 
+    current_d = get_current_date()
+    current_t = get_current_time()
+
     extraction = get_extraction(
         message=combined_message,
-        current_date=date.today(),
+        current_date=current_d,
     )
 
     # --------------------------------------------------------
@@ -739,7 +753,8 @@ def provide_information(
     # --------------------------------------------------------
     parsed_date, parsed_weekday, parsed_time = parse_natural_date_and_time(
         answer,
-        current_date=date.today(),
+        current_date=current_d,
+        now_time=current_t,
     )
     if extraction.preferred_date is None and parsed_date:
         extraction.preferred_date = parsed_date
@@ -757,15 +772,18 @@ def provide_information(
     if extraction.preferred_date is None:
         if extraction.preferred_weekday:
             extraction.preferred_date = get_next_weekday_date(
-                extraction.preferred_weekday, date.today()
+                extraction.preferred_weekday, current_d
             )
         elif extraction.urgency == "high" or any(
             w in answer.lower() for w in ["today", "asap", "urgent", "now"]
         ):
-            extraction.preferred_date = date.today().isoformat()
+            earliest_d, earliest_s = get_earliest_slot_for_flexible_time(current_d, current_t)
+            extraction.preferred_date = earliest_d
+            if extraction.preferred_time is None:
+                extraction.preferred_time = earliest_s
         else:
             extraction.preferred_date = (
-                date.today() + timedelta(days=1)
+                current_d + timedelta(days=1)
             ).isoformat()
 
     # Always synchronize preferred_weekday with preferred_date
@@ -1221,7 +1239,7 @@ def get_request_appointment_options(
     elif service_request.preferred_date:
         target_date = service_request.preferred_date
     else:
-        target_date = date.today().isoformat()
+        target_date = get_current_date().isoformat()
 
     raw_time = (preferred_time or service_request.preferred_time or "morning").strip().lower()
     if "afternoon" in raw_time or "pm" in raw_time or "13" in raw_time:

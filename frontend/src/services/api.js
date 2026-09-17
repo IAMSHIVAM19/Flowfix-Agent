@@ -99,6 +99,8 @@ async function request(
   try {
     const isTechEndpoint = endpoint.startsWith("/technician-api");
     const token = isTechEndpoint ? getTechnicianToken() : getToken();
+    const clientTimezone = Intl?.DateTimeFormat?.().resolvedOptions?.().timeZone || "Australia/Sydney";
+    const clientLocalTime = new Date().toISOString();
 
     const response = await fetch(
       `${API_URL}${endpoint}`,
@@ -106,6 +108,9 @@ async function request(
         ...options,
         headers: {
           "Content-Type": "application/json",
+          "Accept": "application/json",
+          "X-Client-Timezone": clientTimezone,
+          "X-Client-Local-Time": clientLocalTime,
 
           ...(token
             ? {
@@ -135,6 +140,17 @@ async function request(
       data = await response.json();
     } else {
       data = await response.text();
+      // If we received an HTML response for an API call, reject it as an error
+      if (
+        typeof data === "string" &&
+        (data.trim().startsWith("<!DOCTYPE") ||
+          data.trim().startsWith("<html") ||
+          data.trim().startsWith("<head"))
+      ) {
+        throw new Error(
+          `Unexpected HTML response from server for ${endpoint}. Please refresh or check connection.`
+        );
+      }
     }
 
     // --------------------------------------------------------

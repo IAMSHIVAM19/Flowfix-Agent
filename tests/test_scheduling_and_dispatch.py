@@ -154,3 +154,33 @@ class TestOptionsForExtraction:
         early_now = datetime(2026, 9, 9, 8, 0)
         assert is_slot_in_past(today, "09:00", now=early_now) is False
 
+    def test_asap_evening_scheduling_filters_past_slots(self, db):
+        from datetime import date, datetime, time, timedelta
+        from app.services.scheduling_service import is_slot_in_past, get_options_for_extraction
+        from app.services.validation_service import get_earliest_slot_for_flexible_time
+
+        # Simulated 6:51 PM (18:51) on Wednesday Sep 16
+        sim_evening = datetime(2026, 9, 16, 18, 51)
+        today_iso = "2026-09-16"
+
+        # At 18:51, both 9:00 and 13:00 slots for today are in the past
+        assert is_slot_in_past(today_iso, "09:00", now=sim_evening) is True
+        assert is_slot_in_past(today_iso, "13:00", now=sim_evening) is True
+
+        # Flexible earliest slot helper returns tomorrow morning
+        earliest_d, earliest_s = get_earliest_slot_for_flexible_time(sim_evening.date(), sim_evening.time())
+        assert earliest_d == "2026-09-17"
+        assert earliest_s == "morning"
+
+        # If an extraction had today's date and morning, options must be empty because slot has passed
+        extraction = RequestExtraction(
+            issue="burst pipe emergency",
+            service="burst pipe repair",
+            urgency=RequestUrgency.HIGH,
+            preferred_date=today_iso,
+            preferred_time="morning",
+        )
+        options = get_options_for_extraction(db, extraction, filter_past=True, now=sim_evening)
+        assert len(options) == 0, "Past morning slot must not be returned when current time is 18:51"
+
+

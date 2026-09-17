@@ -126,6 +126,13 @@ class TestNaturalDateAndTimeParsing:
         _, _, t2 = parse_natural_date_and_time("first available slot", ref_date)
         assert t2 == "morning"
 
+    def test_asap_evening_parsing_yields_tomorrow_morning(self, ref_date):
+        from datetime import time
+        evening_time = time(18, 51)
+        d, w, t = parse_natural_date_and_time("i need someone asap", ref_date, now_time=evening_time)
+        assert d == (ref_date + timedelta(days=1)).isoformat()
+        assert t == "morning"
+
 
 class TestValidationAndClarification:
     @pytest.fixture
