@@ -132,9 +132,8 @@ def create_request(
             "quote_estimate": _make_quote_estimate(service_request.service, service_request.urgency),
         }
 
-    # --------------------------------------------------------
-    # AI / mock extraction
-    # --------------------------------------------------------
+    # Commit/close transaction so database connection is not left idle during LLM call
+    db.commit()
 
     current_d = get_current_date()
     current_t = get_current_time()
@@ -437,12 +436,24 @@ def confirm_customer(
         )
     )
 
+    # Commit pending customer attachment & message so the database transaction
+    # is closed and not left idle while calling the external LLM provider.
+    db.commit()
+
+    sr_id = service_request.id
+    request_msg = service_request.message
+
     current_d = get_current_date()
     current_t = get_current_time()
 
     extraction = get_extraction(
-        message=service_request.message,
+        message=request_msg,
         current_date=current_d,
+    )
+
+    # Re-fetch service_request in a fresh transaction
+    service_request = db.scalar(
+        select(ServiceRequest).where(ServiceRequest.id == sr_id)
     )
 
     parsed_date, parsed_weekday, parsed_time = parse_natural_date_and_time(
@@ -718,13 +729,19 @@ def provide_information(
         else ""
     )
 
+    sr_id = service_request.id
+    request_msg = service_request.message
+
+    # Commit/close transaction before LLM call so connection is not left idle in transaction
+    db.commit()
+
     # --------------------------------------------------------
     # Rebuild request context
     # --------------------------------------------------------
 
     combined_message = (
         f"Original customer request:\n"
-        f"{service_request.message}\n\n"
+        f"{request_msg}\n\n"
         f"Previous FlowFix question:\n"
         f"{previous_question_text}\n\n"
         f"Customer's answer:\n"
@@ -737,6 +754,11 @@ def provide_information(
     extraction = get_extraction(
         message=combined_message,
         current_date=current_d,
+    )
+
+    # Re-fetch service_request in fresh transaction
+    service_request = db.scalar(
+        select(ServiceRequest).where(ServiceRequest.id == sr_id)
     )
 
     # --------------------------------------------------------

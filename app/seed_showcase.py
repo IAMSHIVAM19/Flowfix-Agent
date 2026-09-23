@@ -16,7 +16,7 @@ from .models_db import (
 )
 
 
-def seed_showcase_data(db=None):
+def seed_showcase_data(db=None, force=False):
     close_db = False
     if db is None:
         db = SessionLocal()
@@ -25,7 +25,8 @@ def seed_showcase_data(db=None):
     try:
         # Check if service requests already exist
         existing_count = db.scalar(select(ServiceRequest.id).limit(1))
-        if existing_count is not None:
+        if existing_count is not None and not force:
+            roll_showcase_dates_if_needed(db)
             return
 
         techs = {t.name: t.id for t in db.query(Technician).all()}
@@ -147,18 +148,18 @@ def seed_showcase_data(db=None):
                 "issue": "Vanity mixer tap leaking under cupboard",
                 "service": "tap repair",
                 "urgency": RequestUrgency.NORMAL,
-                "preferred_date": tomorrow.isoformat(),
-                "preferred_time": "09:00 - 12:00",
+                "preferred_date": today.isoformat(),
+                "preferred_time": "13:00 - 17:00",
                 "status": RequestStatus.CONFIRMED,
                 "appointment": {
                     "tech_name": "Alex",
-                    "date": tomorrow.isoformat(),
-                    "start": "09:00",
-                    "end": "12:00",
+                    "date": today.isoformat(),
+                    "start": "13:00",
+                    "end": "17:00",
                 },
                 "messages": [
                     ("customer", "Vanity mixer tap leaking under cupboard, pooling water."),
-                    ("assistant", f"Tap repair service confirmed. Specialist Alex will attend {tomorrow.strftime('%A %d %B')} (09:00 - 12:00)."),
+                    ("assistant", f"Tap repair service confirmed. Specialist Alex will attend today {today.strftime('%A %d %B')} (13:00 - 17:00)."),
                 ],
             },
             {
@@ -303,6 +304,51 @@ def seed_showcase_data(db=None):
 
         db.commit()
         print("Showcase requests, appointments, and notifications seeded successfully.")
+    finally:
+        if close_db:
+            db.close()
+
+
+def roll_showcase_dates_if_needed(db=None):
+    """
+    If existing showcase appointments have drifted into the past,
+    rolls them forward relative to today so the technician manifest
+    always presents active 'Today' and 'Upcoming' jobs for live demos.
+    """
+    close_db = False
+    if db is None:
+        db = SessionLocal()
+        close_db = True
+
+    try:
+        today = date.today()
+        today_str = today.isoformat()
+
+        past_appointments = list(
+            db.scalars(
+                select(Appointment)
+                .where(
+                    Appointment.appointment_date < today_str,
+                    Appointment.status.in_(["confirmed", "accepted", "scheduled", "en_route"])
+                )
+            ).all()
+        )
+        if not past_appointments:
+            return
+
+        tomorrow_str = (today + timedelta(days=1)).isoformat()
+        day_after_str = (today + timedelta(days=2)).isoformat()
+
+        for idx, app in enumerate(past_appointments):
+            if idx % 3 == 0:
+                app.appointment_date = today_str
+            elif idx % 3 == 1:
+                app.appointment_date = tomorrow_str
+            else:
+                app.appointment_date = day_after_str
+
+        db.commit()
+        print(f"Rolled {len(past_appointments)} showcase appointments forward to current dates.")
     finally:
         if close_db:
             db.close()

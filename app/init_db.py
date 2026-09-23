@@ -59,6 +59,18 @@ def init_database():
                 seed_all(db)
             else:
                 print("Catalog data is already seeded.")
+
+            from .models_db import Appointment
+            from .seed_showcase import seed_showcase_data, roll_showcase_dates_if_needed
+            from .seed_availability import seed_technician_availability
+
+            has_appointments = db.scalar(select(Appointment.id).limit(1))
+            if not has_appointments:
+                print("Seeding showcase appointments & rolling availability...")
+                seed_technician_availability(db)
+                seed_showcase_data(db)
+            else:
+                roll_showcase_dates_if_needed(db)
     except Exception as e:
         print(f"Notice: Seeding check skipped ({e})")
 

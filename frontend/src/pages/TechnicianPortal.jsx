@@ -60,6 +60,7 @@ import {
   getActiveTechniciansList,
   technicianLogin,
   clearTechnicianToken,
+  seedTechnicianShowcase,
 } from "../services/api";
 
 const MotionCard = motion.create(Card);
@@ -906,9 +907,41 @@ function TechnicianPortal() {
                   <Typography variant="h6" fontWeight={750} sx={{ color: "#F8FAFC" }}>
                     No Active Jobs Pending Action
                   </Typography>
-                  <Typography variant="body2" sx={{ color: "#94A3B8" }}>
-                    You are caught up! Check the upcoming schedule tab below for upcoming shifts.
+                  <Typography variant="body2" sx={{ color: "#94A3B8", mb: 2 }}>
+                    You are caught up! If your demo database was recently deployed or unseeded, load realistic showcase jobs below.
                   </Typography>
+                  <Button
+                    variant="contained"
+                    startIcon={<Refresh />}
+                    disabled={actionLoading}
+                    onClick={async () => {
+                      try {
+                        setActionLoading(true);
+                        await seedTechnicianShowcase();
+                        await loadData();
+                        setToast({
+                          open: true,
+                          message: "Showcase manifest refreshed with active jobs for today and tomorrow!",
+                          severity: "success",
+                        });
+                      } catch (err) {
+                        setError("Failed to refresh demo jobs: " + err.message);
+                      } finally {
+                        setActionLoading(false);
+                      }
+                    }}
+                    sx={{
+                      borderRadius: "12px",
+                      background: "linear-gradient(135deg, #0284C7, #2563EB)",
+                      fontWeight: 750,
+                      textTransform: "none",
+                      px: 3,
+                      py: 1,
+                      boxShadow: "0 4px 14px rgba(2, 132, 199, 0.35)",
+                    }}
+                  >
+                    Load Demo Jobs / Refresh Manifest
+                  </Button>
                 </Paper>
               )}
             </Box>

@@ -300,7 +300,8 @@ def get_technician_bookings(
 
     today_items = [
         item for item in all_items
-        if item["appointment_date"] == today_str and item["status"] != "cancelled"
+        if (item["appointment_date"] == today_str and item["status"] != "cancelled")
+        or (item["appointment_date"] < today_str and item["status"] in {"confirmed", "accepted", "en_route", "in_progress"})
     ]
 
     upcoming_items = [
@@ -317,7 +318,6 @@ def get_technician_bookings(
     active_candidates = [
         item for item in all_items
         if item["status"] in {"confirmed", "accepted", "en_route", "in_progress"}
-        and item["appointment_date"] >= today_str
     ]
     up_next = active_candidates[0] if active_candidates else None
 
@@ -440,3 +440,24 @@ def get_technician_schedule(
         }
         for slot in slots
     ]
+
+
+@router.post("/seed-showcase")
+def refresh_showcase_manifest(db: Session = Depends(get_db)):
+    """
+    Seeds or refreshes showcase appointments so the technician portal has active jobs.
+    """
+    from ..seed_availability import seed_technician_availability
+    from ..seed_showcase import seed_showcase_data, roll_showcase_dates_if_needed
+
+    seed_technician_availability(db)
+    has_appointments = db.scalar(select(Appointment.id).limit(1))
+    if not has_appointments:
+        seed_showcase_data(db)
+    else:
+        roll_showcase_dates_if_needed(db)
+
+    return {
+        "status": "success",
+        "message": "Technician manifest successfully synced with current appointments and shifts.",
+    }

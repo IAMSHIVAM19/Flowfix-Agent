@@ -522,3 +522,9 @@ export function getTechnicianSchedule() {
   return request("/technician-api/schedule");
 }
 
+export function seedTechnicianShowcase() {
+  return request("/technician-api/seed-showcase", {
+    method: "POST",
+  });
+}
+
