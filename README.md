@@ -67,6 +67,29 @@ sequenceDiagram
 
 ---
 
+## Visual Interface Tour
+
+### 1. Customer Self-Serve Intake & Upfront Quote Estimation
+![Customer Booking Flow](docs/screenshots/customer_booking_flow.png)
+*Customer intake screen displaying natural language problem entry, trade badge (`tap repair`), and upfront quote breakdown.*
+
+### 2. Operations Command Center (Dispatcher Dashboard)
+![Dispatcher Command Center](docs/screenshots/dispatcher_command_center.png)
+*Operations dashboard showing fleet workload cards, active request pipeline, and urgency badges.*
+
+### 3. Direct Specialist Booking & Reassignment Drawer
+![Admin Booking Drawer](docs/screenshots/admin_booking_drawer.png)
+*Direct booking drawer showing qualified specialist availability filtered by morning/afternoon shift slots.*
+
+### 4. Field Technician Mobile Portal & Decline Workflow
+<p align="center">
+  <img src="docs/screenshots/technician_mobile_portal.png" alt="Field Technician Mobile Portal" width="48%" />
+  <img src="docs/screenshots/decline_redispatch_flow.png" alt="Decline and Re-dispatch Modal" width="48%" />
+</p>
+*Left: Field technician mobile view highlighting the "Up Next" work order, one-tap calling, Google Maps navigation button, and status progression buttons. Right: Modal showing technician decline reason selection and the corresponding dispatcher re-dispatch alert.*
+
+---
+
 ## The Three Operational Portals
 
 ### 1. Conversational Customer Intake Portal (`/customer-portal`)

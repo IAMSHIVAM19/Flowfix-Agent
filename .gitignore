@@ -35,3 +35,6 @@ yarn-error.log*
 # OS artifacts
 .DS_Store
 Thumbs.db
+
+# Playwright CLI session artifacts
+.playwright-cli/
