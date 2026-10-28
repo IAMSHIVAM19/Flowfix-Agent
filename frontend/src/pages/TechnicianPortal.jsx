@@ -1,9 +1,9 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   Alert,
+  Avatar,
   Box,
   Button,
-  ButtonGroup,
   Card,
   CardContent,
   Chip,
@@ -57,8 +57,6 @@ import {
   getTechnicianBookings,
   updateTechnicianBookingStatus,
   getTechnicianSchedule,
-  getActiveTechniciansList,
-  technicianLogin,
   clearTechnicianToken,
   seedTechnicianShowcase,
 } from "../services/api";
@@ -89,7 +87,6 @@ function TechnicianPortal() {
   const [profile, setProfile] = useState(null);
   const [bookings, setBookings] = useState({ up_next: null, today: [], upcoming: [], completed: [] });
   const [schedule, setSchedule] = useState([]);
-  const [techList, setTechList] = useState([]);
   const [activeTab, setActiveTab] = useState(0);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -103,17 +100,15 @@ function TechnicianPortal() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [profData, bookData, schedData, listData] = await Promise.all([
+      const [profData, bookData, schedData] = await Promise.all([
         getTechnicianMe(),
         getTechnicianBookings(),
         getTechnicianSchedule(),
-        getActiveTechniciansList(),
       ]);
 
       setProfile(profData);
       setBookings(bookData);
       setSchedule(schedData || []);
-      setTechList(listData || []);
     } catch (err) {
       console.error("Failed to load technician portal data:", err);
       if (err.message && err.message.includes("401")) {
@@ -129,25 +124,6 @@ function TechnicianPortal() {
   useEffect(() => {
     loadData();
   }, [loadData]);
-
-  // Quick switch technician for demo purposes
-  async function handleSwitchTechnician(techName) {
-    if (!techName || techName === profile?.name) return;
-    try {
-      setLoading(true);
-      await technicianLogin(techName, "1234");
-      await loadData();
-      setToast({
-        open: true,
-        message: `Switched active specialist profile to ${techName}`,
-        severity: "info",
-      });
-    } catch (err) {
-      setError(`Failed to switch to ${techName}: ${err.message}`);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   function handleLogout() {
     clearTechnicianToken();
@@ -300,69 +276,75 @@ function TechnicianPortal() {
             </Box>
           </Stack>
 
-          {/* Right Action Tools & Demo Switcher */}
+          {/* Right Action Tools & Authenticated Specialist Identity */}
           <Stack direction="row" spacing={1.5} alignItems="center">
-            {/* Quick Demo Switcher */}
-            {techList.length > 0 && (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <Typography variant="caption" sx={{ color: "#64748B", display: { xs: "none", sm: "block" } }}>
-                  Active Specialist:
-                </Typography>
-                <Select
-                  size="small"
-                  value={profile?.name || "Alex"}
-                  onChange={(e) => handleSwitchTechnician(e.target.value)}
-                  MenuProps={{
-                    slotProps: {
-                      paper: {
-                        sx: {
-                          backgroundColor: "#1E293B !important",
-                          color: "#F8FAFC",
-                          borderRadius: "12px",
-                          border: "1px solid rgba(255, 255, 255, 0.15)",
-                          boxShadow: "0 12px 36px rgba(0, 0, 0, 0.6)",
-                          backgroundImage: "none",
-                        },
-                      },
-                    },
-                    PaperProps: {
-                      sx: {
-                        backgroundColor: "#1E293B !important",
-                        color: "#F8FAFC",
-                        borderRadius: "12px",
-                        border: "1px solid rgba(255, 255, 255, 0.15)",
-                        boxShadow: "0 12px 36px rgba(0, 0, 0, 0.6)",
-                        backgroundImage: "none",
-                      },
-                    },
-                  }}
+            {/* Authenticated Technician Pill (Secure read-only identity indicator) */}
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1.25,
+                px: { xs: 1.2, sm: 1.75 },
+                py: 0.6,
+                borderRadius: "12px",
+                backgroundColor: "rgba(255, 255, 255, 0.04)",
+                border: "1px solid rgba(255, 255, 255, 0.12)",
+                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)",
+              }}
+            >
+              <Avatar
+                sx={{
+                  width: 30,
+                  height: 30,
+                  bgcolor: "#2563EB",
+                  fontSize: "0.82rem",
+                  fontWeight: 800,
+                  color: "#FFFFFF",
+                  border: "1.5px solid rgba(255, 255, 255, 0.25)",
+                }}
+              >
+                {profile?.name ? profile.name.charAt(0).toUpperCase() : "T"}
+              </Avatar>
+              <Box sx={{ textAlign: "left" }}>
+                <Typography
+                  variant="subtitle2"
                   sx={{
-                    height: 36,
-                    borderRadius: "10px",
-                    backgroundColor: "rgba(255, 255, 255, 0.05)",
                     color: "#F8FAFC",
-                    fontSize: "0.85rem",
-                    fontWeight: 700,
-                    "& .MuiSelect-select": {
-                      color: "#F8FAFC",
-                    },
-                    "& .MuiOutlinedInput-notchedOutline": {
-                      borderColor: "rgba(255, 255, 255, 0.15)",
-                    },
-                    "&:hover .MuiOutlinedInput-notchedOutline": {
-                      borderColor: "rgba(255, 255, 255, 0.3)",
-                    },
-                    "& .MuiSvgIcon-root": { color: "#94A3B8" },
+                    fontWeight: 750,
+                    fontSize: { xs: "0.8rem", sm: "0.85rem" },
+                    lineHeight: 1.15,
                   }}
                 >
-                  {techList.map((t) => (
-                    <MenuItem key={t.id} value={t.name} sx={{ fontSize: "0.85rem", fontWeight: 600 }}>
-                      {t.name} ({t.services.slice(0, 2).join(", ")})
-                    </MenuItem>
-                  ))}
-                </Select>
+                  {profile?.name || "Technician"}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "#10B981",
+                    fontSize: "0.68rem",
+                    fontWeight: 650,
+                    display: { xs: "none", sm: "flex" },
+                    alignItems: "center",
+                    gap: 0.5,
+                    lineHeight: 1,
+                    mt: 0.2,
+                  }}
+                >
+                  <Box
+                    component="span"
+                    sx={{
+                      width: 5,
+                      height: 5,
+                      borderRadius: "50%",
+                      backgroundColor: "#10B981",
+                      display: "inline-block",
+                      boxShadow: "0 0 6px #10B981",
+                    }}
+                  />
+                  Logged In
+                </Typography>
               </Box>
-            )}
+            </Box>
 
             <Tooltip title="Refresh Manifest">
               <IconButton onClick={loadData} sx={{ color: "#94A3B8", backgroundColor: "rgba(255, 255, 255, 0.04)" }}>
@@ -1100,6 +1082,9 @@ function TechnicianPortal() {
               border: "1px solid rgba(239, 68, 68, 0.4)",
               boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.8)",
               backgroundImage: "none !important",
+              m: { xs: 1.5, sm: 3 },
+              width: { xs: "calc(100% - 24px)", sm: "auto" },
+              maxWidth: "480px",
             },
           },
         }}
@@ -1111,13 +1096,16 @@ function TechnicianPortal() {
             border: "1px solid rgba(239, 68, 68, 0.4)",
             boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.8)",
             backgroundImage: "none !important",
+            m: { xs: 1.5, sm: 3 },
+            width: { xs: "calc(100% - 24px)", sm: "auto" },
+            maxWidth: "480px",
           },
         }}
       >
         <DialogTitle sx={{ fontWeight: 800, color: "#F87171", fontSize: "1.25rem" }}>
           Decline Booking #{declineModal.booking?.id}
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ px: { xs: 2, sm: 3 } }}>
           <Typography variant="body2" sx={{ color: "#CBD5E1", mb: 2.5 }}>
             Please select the reason for declining this booking. The operations dispatcher will be immediately alerted so the customer can be reallocated to another qualified specialist.
           </Typography>
@@ -1225,7 +1213,7 @@ function TechnicianPortal() {
             }}
           />
         </DialogContent>
-        <DialogActions sx={{ p: 2.5 }}>
+        <DialogActions sx={{ p: { xs: 2, sm: 2.5 }, gap: 1, flexWrap: "wrap", justifyContent: "flex-end" }}>
           <Button
             onClick={() => setDeclineModal({ open: false, booking: null, reason: "", customNote: "" })}
             sx={{ color: "#94A3B8", textTransform: "none", fontWeight: 700, "&:hover": { color: "#F8FAFC" } }}
@@ -1258,6 +1246,9 @@ function TechnicianPortal() {
               border: "1px solid rgba(16, 185, 129, 0.4)",
               boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.8)",
               backgroundImage: "none !important",
+              m: { xs: 1.5, sm: 3 },
+              width: { xs: "calc(100% - 24px)", sm: "auto" },
+              maxWidth: "480px",
             },
           },
         }}
@@ -1269,6 +1260,9 @@ function TechnicianPortal() {
             border: "1px solid rgba(16, 185, 129, 0.4)",
             boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.8)",
             backgroundImage: "none !important",
+            m: { xs: 1.5, sm: 3 },
+            width: { xs: "calc(100% - 24px)", sm: "auto" },
+            maxWidth: "480px",
           },
         }}
       >
