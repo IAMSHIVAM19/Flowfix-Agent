@@ -464,6 +464,9 @@ function Technicians() {
         anchor="right"
         open={Boolean(selectedTechnician)}
         onClose={closeDrawer}
+        sx={{
+          zIndex: (theme) => theme.zIndex.drawer + 2,
+        }}
         slotProps={{
           paper: {
             sx: {
@@ -471,14 +474,19 @@ function Technicians() {
               boxSizing: "border-box",
               borderLeft: "1px solid #E2E8F0",
               boxShadow: "0 25px 60px -15px rgba(15, 23, 42, 0.2)",
+              display: "flex",
+              flexDirection: "column",
+              height: "100%",
+              maxHeight: "100vh",
+              overflow: "hidden",
             },
           },
         }}
       >
         {selectedTechnician && (
-          <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+          <Box sx={{ height: "100%", display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
             {/* Header */}
-            <Box sx={{ p: 3, pb: 2, borderBottom: "1px solid #E2E8F0", backgroundColor: "#F8FAFC" }}>
+            <Box sx={{ p: 3, pb: 2, borderBottom: "1px solid #E2E8F0", backgroundColor: "#F8FAFC", flexShrink: 0 }}>
               <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1.5 }}>
                 <Stack direction="row" spacing={2} alignItems="center">
                   <Box
@@ -512,65 +520,52 @@ function Technicians() {
               </Box>
             </Box>
 
-            {/* Content */}
-            <Box sx={{ p: 3, flexGrow: 1, overflowY: "auto" }}>
+            {/* Scrollable Content */}
+            <Box
+              sx={{
+                p: 3,
+                flexGrow: 1,
+                minHeight: 0,
+                overflowY: "auto",
+                overscrollBehavior: "contain",
+                WebkitOverflowScrolling: "touch",
+                "&::-webkit-scrollbar": {
+                  width: 8,
+                },
+                "&::-webkit-scrollbar-track": {
+                  backgroundColor: "#F1F5F9",
+                  borderRadius: 4,
+                },
+                "&::-webkit-scrollbar-thumb": {
+                  backgroundColor: "#CBD5E1",
+                  borderRadius: 4,
+                },
+                "&::-webkit-scrollbar-thumb:hover": {
+                  backgroundColor: "#94A3B8",
+                },
+              }}
+            >
               <Stack spacing={3}>
                 {availabilityError && <ErrorState message={availabilityError} />}
 
-                {/* Working Availability Windows */}
+                {/* Assigned Appointments (Primary Dispatch Inspection) */}
                 <Paper variant="outlined" sx={{ p: 2.5, borderRadius: "16px" }}>
-                  <Typography variant="caption" fontWeight={750} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: "0.06em", display: "block", mb: 1.5 }}>
-                    Configured Working Shifts
-                  </Typography>
-
-                  {loadingAvailability ? (
-                    <Box sx={{ py: 3, textAlign: "center" }}>
-                      <CircularProgress size={24} />
-                      <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
-                        Querying technician availability table...
-                      </Typography>
-                    </Box>
-                  ) : availability.length === 0 ? (
-                    <Typography variant="body2" color="text.secondary">
-                      No availability windows defined in calendar.
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
+                    <Typography variant="caption" fontWeight={750} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                      Assigned Appointments ({selectedTechnician.appointments?.length || 0})
                     </Typography>
-                  ) : (
-                    <Stack spacing={1}>
-                      {availability.map((slot, idx) => (
-                        <Box
-                          key={slot.id || idx}
-                          sx={{
-                            p: 1.75,
-                            borderRadius: "12px",
-                            backgroundColor: "#F8FAFC",
-                            border: "1px solid #E2E8F0",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                          }}
-                        >
-                          <Stack direction="row" spacing={1.5} alignItems="center">
-                            <CalendarMonth sx={{ fontSize: 18, color: "#2563EB" }} />
-                            <Typography variant="body2" fontWeight={700} color="#0F172A">
-                              {slot.available_date}
-                            </Typography>
-                          </Stack>
-                          <Chip
-                            label={`${slot.start_time} – ${slot.end_time}`}
-                            size="small"
-                            sx={{ fontWeight: 700, backgroundColor: "rgba(37, 99, 235, 0.08)", color: "#2563EB" }}
-                          />
-                        </Box>
-                      ))}
-                    </Stack>
-                  )}
-                </Paper>
-
-                {/* Booked Appointments */}
-                <Paper variant="outlined" sx={{ p: 2.5, borderRadius: "16px" }}>
-                  <Typography variant="caption" fontWeight={750} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: "0.06em", display: "block", mb: 1.5 }}>
-                    Assigned Appointments ({selectedTechnician.appointments?.length || 0})
-                  </Typography>
+                    <Chip
+                      size="small"
+                      label={`${(selectedTechnician.appointments || []).filter((a) => a.status !== "completed" && a.status !== "cancelled").length} Active`}
+                      sx={{
+                        height: 20,
+                        fontSize: "0.68rem",
+                        fontWeight: 750,
+                        backgroundColor: "rgba(37, 99, 235, 0.08)",
+                        color: "#2563EB",
+                      }}
+                    />
+                  </Box>
 
                   {(!selectedTechnician.appointments || selectedTechnician.appointments.length === 0) ? (
                     <Typography variant="body2" color="text.secondary">
@@ -584,8 +579,8 @@ function Technicians() {
                           sx={{
                             p: 2,
                             borderRadius: "12px",
-                            backgroundColor: "rgba(16, 185, 129, 0.04)",
-                            border: "1px solid rgba(16, 185, 129, 0.2)",
+                            backgroundColor: app.status === "completed" ? "#F8FAFC" : "rgba(16, 185, 129, 0.04)",
+                            border: `1px solid ${app.status === "completed" ? "#E2E8F0" : "rgba(16, 185, 129, 0.2)"}`,
                           }}
                         >
                           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.5 }}>
@@ -646,6 +641,75 @@ function Technicians() {
                         </Box>
                       ))}
                     </Stack>
+                  )}
+                </Paper>
+
+                {/* Working Availability Windows */}
+                <Paper variant="outlined" sx={{ p: 2.5, borderRadius: "16px" }}>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
+                    <Typography variant="caption" fontWeight={750} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                      Configured Working Shifts ({availability.length})
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Rolling Schedule
+                    </Typography>
+                  </Box>
+
+                  {loadingAvailability ? (
+                    <Box sx={{ py: 3, textAlign: "center" }}>
+                      <CircularProgress size={24} />
+                      <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
+                        Querying technician availability table...
+                      </Typography>
+                    </Box>
+                  ) : availability.length === 0 ? (
+                    <Typography variant="body2" color="text.secondary">
+                      No availability windows defined in calendar.
+                    </Typography>
+                  ) : (
+                    <Box
+                      sx={{
+                        maxHeight: 340,
+                        overflowY: "auto",
+                        pr: 0.5,
+                        "&::-webkit-scrollbar": {
+                          width: 6,
+                        },
+                        "&::-webkit-scrollbar-thumb": {
+                          backgroundColor: "#CBD5E1",
+                          borderRadius: 3,
+                        },
+                      }}
+                    >
+                      <Stack spacing={1}>
+                        {availability.map((slot, idx) => (
+                          <Box
+                            key={slot.id || idx}
+                            sx={{
+                              p: 1.5,
+                              borderRadius: "12px",
+                              backgroundColor: "#F8FAFC",
+                              border: "1px solid #E2E8F0",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                            }}
+                          >
+                            <Stack direction="row" spacing={1.5} alignItems="center">
+                              <CalendarMonth sx={{ fontSize: 18, color: "#2563EB" }} />
+                              <Typography variant="body2" fontWeight={700} color="#0F172A">
+                                {slot.available_date}
+                              </Typography>
+                            </Stack>
+                            <Chip
+                              label={`${slot.start_time} – ${slot.end_time}`}
+                              size="small"
+                              sx={{ fontWeight: 700, backgroundColor: "rgba(37, 99, 235, 0.08)", color: "#2563EB" }}
+                            />
+                          </Box>
+                        ))}
+                      </Stack>
+                    </Box>
                   )}
                 </Paper>
               </Stack>

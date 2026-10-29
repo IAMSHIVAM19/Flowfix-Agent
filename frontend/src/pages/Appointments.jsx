@@ -531,6 +531,9 @@ function Appointments() {
         anchor="right"
         open={Boolean(selectedAppointment)}
         onClose={() => setSelectedAppointment(null)}
+        sx={{
+          zIndex: (theme) => theme.zIndex.drawer + 2,
+        }}
         slotProps={{
           paper: {
             sx: {
@@ -538,13 +541,18 @@ function Appointments() {
               boxSizing: "border-box",
               borderLeft: "1px solid #E2E8F0",
               boxShadow: "0 25px 60px -15px rgba(15, 23, 42, 0.2)",
+              display: "flex",
+              flexDirection: "column",
+              height: "100%",
+              maxHeight: "100vh",
+              overflow: "hidden",
             },
           },
         }}
       >
         {selectedAppointment && (
-          <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
-            <Box sx={{ p: 3, pb: 2, borderBottom: "1px solid #E2E8F0", backgroundColor: "#F8FAFC" }}>
+          <Box sx={{ height: "100%", display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
+            <Box sx={{ p: 3, pb: 2, borderBottom: "1px solid #E2E8F0", backgroundColor: "#F8FAFC", flexShrink: 0 }}>
               <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Typography variant="h6" fontWeight={850} color="#0F172A">
@@ -561,7 +569,30 @@ function Appointments() {
               </Typography>
             </Box>
 
-            <Box sx={{ p: 3, flexGrow: 1, overflowY: "auto" }}>
+            <Box
+              sx={{
+                p: 3,
+                flexGrow: 1,
+                minHeight: 0,
+                overflowY: "auto",
+                overscrollBehavior: "contain",
+                WebkitOverflowScrolling: "touch",
+                "&::-webkit-scrollbar": {
+                  width: 8,
+                },
+                "&::-webkit-scrollbar-track": {
+                  backgroundColor: "#F1F5F9",
+                  borderRadius: 4,
+                },
+                "&::-webkit-scrollbar-thumb": {
+                  backgroundColor: "#CBD5E1",
+                  borderRadius: 4,
+                },
+                "&::-webkit-scrollbar-thumb:hover": {
+                  backgroundColor: "#94A3B8",
+                },
+              }}
+            >
               <Stack spacing={3}>
                 {/* Date & Time Window */}
                 <Paper variant="outlined" sx={{ p: 2.5, borderRadius: "16px" }}>
