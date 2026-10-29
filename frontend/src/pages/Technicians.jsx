@@ -465,7 +465,7 @@ function Technicians() {
         open={Boolean(selectedTechnician)}
         onClose={closeDrawer}
         sx={{
-          zIndex: (theme) => theme.zIndex.drawer + 2,
+          zIndex: (theme) => theme.zIndex.modal + 1,
         }}
         slotProps={{
           paper: {

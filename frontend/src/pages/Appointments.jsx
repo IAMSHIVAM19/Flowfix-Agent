@@ -532,7 +532,7 @@ function Appointments() {
         open={Boolean(selectedAppointment)}
         onClose={() => setSelectedAppointment(null)}
         sx={{
-          zIndex: (theme) => theme.zIndex.drawer + 2,
+          zIndex: (theme) => theme.zIndex.modal + 1,
         }}
         slotProps={{
           paper: {

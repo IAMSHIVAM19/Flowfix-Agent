@@ -100,7 +100,7 @@ function TopBar({ onMobileMenuToggle, currentAdmin, onLogout }) {
         backgroundColor: "rgba(255, 255, 255, 0.85)",
         backdropFilter: "blur(12px)",
         borderBottom: "1px solid #E2E8F0",
-        zIndex: (theme) => theme.zIndex.drawer + 1,
+        zIndex: (theme) => theme.zIndex.appBar,
       }}
     >
       <Toolbar sx={{ justifyContent: "space-between", minHeight: 64, px: { xs: 2, sm: 3 } }}>
