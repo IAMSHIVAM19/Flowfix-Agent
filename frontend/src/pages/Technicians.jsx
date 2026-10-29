@@ -53,6 +53,7 @@ import {
   getTechnicianServices,
   createTechnician,
   getTechnicianAvailability,
+  updateAppointmentStatus,
 } from "../services/api";
 
 function formatLabel(value) {
@@ -188,8 +189,15 @@ function Technicians() {
     setAvailabilityError("");
   }
 
-  const totalAppointments = useMemo(() => {
-    return technicians.reduce((acc, t) => acc + (t.appointments?.length || 0), 0);
+  const [updatingApptId, setUpdatingApptId] = useState(null);
+
+  const activeDispatchedJobs = useMemo(() => {
+    return technicians.reduce((acc, t) => {
+      const active = (t.appointments || []).filter(
+        (a) => a.status !== "completed" && a.status !== "cancelled"
+      );
+      return acc + active.length;
+    }, 0);
   }, [technicians]);
 
   return (
@@ -262,10 +270,10 @@ function Technicians() {
               Active Dispatched Jobs
             </Typography>
             <Typography variant="h3" fontWeight={850} color="#2563EB" sx={{ mt: 0.5 }}>
-              {totalAppointments}
+              {activeDispatchedJobs}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Confirmed on dispatch schedule
+              Currently active & scheduled jobs
             </Typography>
           </Paper>
         </Grid>
@@ -291,10 +299,25 @@ function Technicians() {
       ) : (
         <Grid container spacing={3}>
           {technicians.map((tech) => {
-            const bookedCount = tech.appointments?.length || 0;
-            const maxCap = Math.max(5, bookedCount);
-            const loadPercent = Math.min(Math.round((bookedCount / maxCap) * 100), 100);
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const allApps = tech.appointments || [];
+            const activeApps = allApps.filter(
+              (a) => a.status !== "completed" && a.status !== "cancelled"
+            );
+            const activeToday = activeApps.filter((a) => a.appointment_date === todayStr);
+            const completedToday = allApps.filter(
+              (a) => a.appointment_date === todayStr && a.status === "completed"
+            );
+
+            // Daily shift capacity is standard 2 slots (09:00-12:00 and 13:00-17:00)
+            const isTodayRelevant = activeToday.length > 0 || completedToday.length > 0;
+            const bookedCount = isTodayRelevant ? activeToday.length : activeApps.length;
+            const maxCap = isTodayRelevant
+              ? Math.max(2, activeToday.length + completedToday.length)
+              : Math.max(2, bookedCount);
+            const loadPercent = maxCap > 0 ? Math.min(Math.round((bookedCount / maxCap) * 100), 100) : 0;
             const isHeavy = loadPercent >= 80;
+            const isFree = bookedCount === 0;
 
             return (
               <Grid key={tech.id} size={{ xs: 12, md: 6, lg: 4 }}>
@@ -347,14 +370,18 @@ function Technicians() {
                       </Stack>
 
                       <Chip
-                        label={isHeavy ? "High Load" : "Ready"}
+                        label={isHeavy ? "At Capacity" : isFree ? "Available" : `${maxCap - bookedCount} Slot Free`}
                         size="small"
                         sx={{
                           height: 22,
                           fontSize: "0.7rem",
                           fontWeight: 750,
-                          backgroundColor: isHeavy ? "rgba(245, 158, 11, 0.12)" : "rgba(16, 185, 129, 0.12)",
-                          color: isHeavy ? "#B45309" : "#047857",
+                          backgroundColor: isHeavy
+                            ? "rgba(245, 158, 11, 0.12)"
+                            : isFree
+                            ? "rgba(16, 185, 129, 0.12)"
+                            : "rgba(37, 99, 235, 0.1)",
+                          color: isHeavy ? "#B45309" : isFree ? "#047857" : "#2563EB",
                         }}
                       />
                     </Box>
@@ -363,10 +390,10 @@ function Technicians() {
                     <Box sx={{ p: 1.5, borderRadius: "12px", backgroundColor: "#F8FAFC", border: "1px solid #E2E8F0", mb: 2 }}>
                       <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.75 }}>
                         <Typography variant="caption" fontWeight={650} color="#475569">
-                          Current Shift Utilization
+                          {isTodayRelevant ? "Today's Shift Utilization" : "Active Shift Utilization"}
                         </Typography>
                         <Typography variant="caption" fontWeight={800} color="#0F172A">
-                          {bookedCount} / {maxCap} Jobs ({loadPercent}%)
+                          {bookedCount} / {maxCap} Slots ({loadPercent}%)
                         </Typography>
                       </Box>
                       <LinearProgress
@@ -413,7 +440,7 @@ function Technicians() {
                     {/* Footer Button */}
                     <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <Typography variant="caption" color="text.secondary">
-                        {tech.appointments?.length || 0} scheduled jobs
+                        {activeApps.length} active ({allApps.length} total)
                       </Typography>
                       <Button
                         size="small"
@@ -570,6 +597,52 @@ function Technicians() {
                           <Typography variant="body2" color="#0F172A" fontWeight={600}>
                             {app.appointment_date} ({app.start_time} – {app.end_time})
                           </Typography>
+                          {app.status !== "completed" && app.status !== "cancelled" && (
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              color="success"
+                              startIcon={<CheckCircle sx={{ fontSize: "14px !important" }} />}
+                              disabled={updatingApptId === app.id}
+                              onClick={async () => {
+                                try {
+                                  setUpdatingApptId(app.id);
+                                  await updateAppointmentStatus(app.id, "completed");
+                                  await loadTechnicians();
+                                  setSelectedTechnician((prev) => {
+                                    if (!prev) return null;
+                                    return {
+                                      ...prev,
+                                      appointments: (prev.appointments || []).map((a) =>
+                                        a.id === app.id ? { ...a, status: "completed" } : a
+                                      ),
+                                    };
+                                  });
+                                } catch (err) {
+                                  console.error("Failed to complete appointment:", err);
+                                } finally {
+                                  setUpdatingApptId(null);
+                                }
+                              }}
+                              sx={{
+                                mt: 1,
+                                py: 0.3,
+                                px: 1.25,
+                                borderRadius: "8px",
+                                fontSize: "0.72rem",
+                                fontWeight: 750,
+                                textTransform: "none",
+                                borderColor: "rgba(16, 185, 129, 0.4)",
+                                color: "#047857",
+                                "&:hover": {
+                                  backgroundColor: "rgba(16, 185, 129, 0.08)",
+                                  borderColor: "#10B981",
+                                },
+                              }}
+                            >
+                              {updatingApptId === app.id ? "Updating..." : "Mark Completed (Free Capacity)"}
+                            </Button>
+                          )}
                         </Box>
                       ))}
                     </Stack>

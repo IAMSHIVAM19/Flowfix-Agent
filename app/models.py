@@ -562,3 +562,9 @@ class TechnicianStatusUpdateRequest(BaseModel):
     status: str = Field(pattern="^(accepted|declined|en_route|completed)$")
     reason: str | None = None
     notes: str | None = None
+
+
+class AdminAppointmentStatusUpdateRequest(BaseModel):
+    status: str = Field(pattern="^(confirmed|accepted|en_route|in_progress|completed|cancelled)$")
+    notes: str | None = None
+    reason: str | None = None

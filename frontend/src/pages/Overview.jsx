@@ -50,6 +50,7 @@ import {
   getRequests,
   getAppointments,
   getTechnicians,
+  updateAppointmentStatus,
 } from "../services/api";
 
 function Overview() {
@@ -148,6 +149,20 @@ function Overview() {
       );
     } catch (err) {
       console.error("Failed to acknowledge notification:", err);
+    }
+  }
+
+  const [completingApptId, setCompletingApptId] = useState(null);
+
+  async function handleCompleteAppointment(appointmentId) {
+    try {
+      setCompletingApptId(appointmentId);
+      await updateAppointmentStatus(appointmentId, "completed");
+      await loadOverview();
+    } catch (err) {
+      console.error("Failed to mark appointment completed:", err);
+    } finally {
+      setCompletingApptId(null);
     }
   }
 
@@ -495,10 +510,25 @@ function Overview() {
 
         <Grid container spacing={2}>
           {technicians.map((tech) => {
-            const bookedCount = tech.appointments?.length || 0;
-            const maxCapacity = Math.max(5, bookedCount);
-            const percentage = Math.min(Math.round((bookedCount / maxCapacity) * 100), 100);
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const allApps = tech.appointments || [];
+            const activeApps = allApps.filter(
+              (a) => a.status !== "completed" && a.status !== "cancelled"
+            );
+            const activeToday = activeApps.filter((a) => a.appointment_date === todayStr);
+            const completedToday = allApps.filter(
+              (a) => a.appointment_date === todayStr && a.status === "completed"
+            );
+
+            // Daily shift capacity is standard 2 slots (Morning 9-12, Afternoon 1-5)
+            const isTodayRelevant = activeToday.length > 0 || completedToday.length > 0;
+            const bookedCount = isTodayRelevant ? activeToday.length : activeApps.length;
+            const maxCapacity = isTodayRelevant
+              ? Math.max(2, activeToday.length + completedToday.length)
+              : Math.max(2, bookedCount);
+            const percentage = maxCapacity > 0 ? Math.min(Math.round((bookedCount / maxCapacity) * 100), 100) : 0;
             const isFull = percentage >= 80;
+            const isAvailable = bookedCount === 0;
 
             return (
               <Grid key={tech.id} size={{ xs: 12, sm: 6, md: 3 }}>
@@ -542,14 +572,18 @@ function Overview() {
                       </Typography>
                     </Box>
                     <Chip
-                      label={isFull ? "Busy" : "Available"}
+                      label={isFull ? "At Capacity" : isAvailable ? "Available" : `${maxCapacity - bookedCount} Free`}
                       size="small"
                       sx={{
                         height: 20,
                         fontSize: "0.68rem",
                         fontWeight: 750,
-                        backgroundColor: isFull ? "rgba(245, 158, 11, 0.1)" : "rgba(16, 185, 129, 0.1)",
-                        color: isFull ? "#B45309" : "#047857",
+                        backgroundColor: isFull
+                          ? "rgba(245, 158, 11, 0.1)"
+                          : isAvailable
+                          ? "rgba(16, 185, 129, 0.1)"
+                          : "rgba(37, 99, 235, 0.1)",
+                        color: isFull ? "#B45309" : isAvailable ? "#047857" : "#2563EB",
                       }}
                     />
                   </Stack>
@@ -566,7 +600,7 @@ function Overview() {
                       }}
                     >
                       <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                        Workload
+                        {isTodayRelevant ? "Today's Shift Load" : "Active Load"}
                       </Typography>
                       <Typography variant="caption" fontWeight={750} color="#0F172A">
                         {bookedCount} / {maxCapacity} ({percentage}%)
@@ -766,7 +800,38 @@ function Overview() {
                       </Box>
                     </Stack>
 
-                    <StatusChip status={app.status || "confirmed"} size="small" />
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <StatusChip status={app.status || "confirmed"} size="small" />
+                      {app.status !== "completed" && app.status !== "cancelled" && (
+                        <Tooltip title="Mark Job Completed & Free Technician Capacity">
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            color="success"
+                            disabled={completingApptId === app.id}
+                            onClick={() => handleCompleteAppointment(app.id)}
+                            startIcon={<Check sx={{ fontSize: "13px !important" }} />}
+                            sx={{
+                              height: 24,
+                              fontSize: "0.68rem",
+                              fontWeight: 750,
+                              px: 0.9,
+                              py: 0.2,
+                              borderRadius: "8px",
+                              borderColor: "rgba(16, 185, 129, 0.4)",
+                              color: "#047857",
+                              textTransform: "none",
+                              "&:hover": {
+                                backgroundColor: "rgba(16, 185, 129, 0.08)",
+                                borderColor: "#10B981",
+                              },
+                            }}
+                          >
+                            {completingApptId === app.id ? "Saving..." : "Complete"}
+                          </Button>
+                        </Tooltip>
+                      )}
+                    </Stack>
                   </Box>
                 ))
               )}

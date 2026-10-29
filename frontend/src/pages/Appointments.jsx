@@ -39,6 +39,8 @@ import {
   ViewAgenda,
   TableRows,
   CheckCircle,
+  Navigation,
+  CancelOutlined,
 } from "@mui/icons-material";
 
 import StatusChip from "../components/StatusChip";
@@ -47,7 +49,7 @@ import LoadingState from "../components/LoadingState";
 import ErrorState from "../components/ErrorState";
 import EmptyState from "../components/EmptyState";
 import useApi from "../hooks/useApi";
-import { getAppointments } from "../services/api";
+import { getAppointments, updateAppointmentStatus } from "../services/api";
 
 function formatLabel(value) {
   if (!value) return "Confirmed";
@@ -72,6 +74,22 @@ function Appointments() {
   const [technicianFilter, setTechnicianFilter] = useState("all");
   const [viewMode, setViewMode] = useState("grid"); // "grid" or "table"
   const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [actionLoadingId, setActionLoadingId] = useState(null);
+
+  async function handleUpdateStatus(appointmentId, newStatus, reason = null) {
+    try {
+      setActionLoadingId(appointmentId);
+      await updateAppointmentStatus(appointmentId, newStatus, null, reason);
+      setSelectedAppointment((prev) =>
+        prev && prev.id === appointmentId ? { ...prev, status: newStatus } : prev
+      );
+      await loadAppointments();
+    } catch (err) {
+      console.error("Failed to update appointment status:", err);
+    } finally {
+      setActionLoadingId(null);
+    }
+  }
 
   useEffect(() => {
     loadAppointments();
@@ -327,19 +345,52 @@ function Appointments() {
 
                   <Divider sx={{ my: 1.5 }} />
 
-                  {/* Linked Request Info */}
+                  {/* Linked Request Info & Quick Complete */}
                   <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <Typography variant="caption" color="text.secondary">
                       Linked to Request #{app.service_request_id || app.request_id || app.id}
                     </Typography>
-                    <Button
-                      size="small"
-                      variant="text"
-                      onClick={() => setSelectedAppointment(app)}
-                      sx={{ fontWeight: 700, fontSize: "0.75rem", p: 0 }}
-                    >
-                      Inspect Details →
-                    </Button>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      {app.status !== "completed" && app.status !== "cancelled" && (
+                        <Tooltip title="Mark Job Completed & Release Capacity">
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            color="success"
+                            disabled={actionLoadingId === app.id}
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              await handleUpdateStatus(app.id, "completed");
+                            }}
+                            startIcon={<CheckCircle sx={{ fontSize: "13px !important" }} />}
+                            sx={{
+                              height: 24,
+                              fontSize: "0.7rem",
+                              fontWeight: 750,
+                              px: 0.9,
+                              borderRadius: "8px",
+                              borderColor: "rgba(16, 185, 129, 0.4)",
+                              color: "#047857",
+                              textTransform: "none",
+                              "&:hover": {
+                                backgroundColor: "rgba(16, 185, 129, 0.08)",
+                                borderColor: "#10B981",
+                              },
+                            }}
+                          >
+                            {actionLoadingId === app.id ? "..." : "Complete"}
+                          </Button>
+                        </Tooltip>
+                      )}
+                      <Button
+                        size="small"
+                        variant="text"
+                        onClick={() => setSelectedAppointment(app)}
+                        sx={{ fontWeight: 700, fontSize: "0.75rem", p: 0 }}
+                      >
+                        Inspect Details →
+                      </Button>
+                    </Stack>
                   </Box>
                 </CardContent>
               </Card>
@@ -421,17 +472,51 @@ function Appointments() {
                     </TableCell>
 
                     <TableCell align="right">
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedAppointment(app);
-                        }}
-                        sx={{ minWidth: 32, px: 1.25, py: 0.4, borderRadius: "8px", fontSize: "0.75rem" }}
-                      >
-                        Details
-                      </Button>
+                      <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
+                        {app.status !== "completed" && app.status !== "cancelled" && (
+                          <Tooltip title="Mark Job Completed & Free Technician Capacity">
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              color="success"
+                              disabled={actionLoadingId === app.id}
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                await handleUpdateStatus(app.id, "completed");
+                              }}
+                              startIcon={<CheckCircle sx={{ fontSize: "13px !important" }} />}
+                              sx={{
+                                minWidth: 32,
+                                px: 1,
+                                py: 0.3,
+                                borderRadius: "8px",
+                                fontSize: "0.72rem",
+                                fontWeight: 750,
+                                borderColor: "rgba(16, 185, 129, 0.4)",
+                                color: "#047857",
+                                textTransform: "none",
+                                "&:hover": {
+                                  backgroundColor: "rgba(16, 185, 129, 0.08)",
+                                  borderColor: "#10B981",
+                                },
+                              }}
+                            >
+                              {actionLoadingId === app.id ? "..." : "Complete"}
+                            </Button>
+                          </Tooltip>
+                        )}
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedAppointment(app);
+                          }}
+                          sx={{ minWidth: 32, px: 1.25, py: 0.4, borderRadius: "8px", fontSize: "0.75rem" }}
+                        >
+                          Details
+                        </Button>
+                      </Stack>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -571,6 +656,112 @@ function Appointments() {
                     </Typography>
                   </Box>
                 )}
+
+                {/* Operations Status Controls */}
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 2.5,
+                    borderRadius: "16px",
+                    backgroundColor: "#F8FAFC",
+                    border: "1px solid #E2E8F0",
+                  }}
+                >
+                  <Typography
+                    variant="caption"
+                    fontWeight={750}
+                    color="text.secondary"
+                    sx={{ textTransform: "uppercase", letterSpacing: "0.06em", display: "block", mb: 1.5 }}
+                  >
+                    Operations Status Controls
+                  </Typography>
+
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
+                    <Typography variant="body2" color="#0F172A" fontWeight={700}>
+                      Current State:
+                    </Typography>
+                    <StatusChip status={selectedAppointment.status || "confirmed"} />
+                  </Box>
+
+                  <Stack spacing={1.25}>
+                    {selectedAppointment.status !== "completed" ? (
+                      <Button
+                        variant="contained"
+                        fullWidth
+                        startIcon={<CheckCircle />}
+                        disabled={actionLoadingId === selectedAppointment.id}
+                        onClick={() => handleUpdateStatus(selectedAppointment.id, "completed")}
+                        sx={{
+                          backgroundColor: "#10B981",
+                          fontWeight: 750,
+                          borderRadius: "10px",
+                          py: 1,
+                          textTransform: "none",
+                          "&:hover": { backgroundColor: "#059669" },
+                        }}
+                      >
+                        {actionLoadingId === selectedAppointment.id ? "Updating..." : "Mark Booking Completed"}
+                      </Button>
+                    ) : (
+                      <Box
+                        sx={{
+                          p: 1.5,
+                          borderRadius: "10px",
+                          backgroundColor: "rgba(16, 185, 129, 0.08)",
+                          border: "1px solid rgba(16, 185, 129, 0.25)",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                        }}
+                      >
+                        <CheckCircle sx={{ color: "#10B981", fontSize: 20 }} />
+                        <Typography variant="body2" fontWeight={700} color="#047857">
+                          Job completed. Technician capacity has been released.
+                        </Typography>
+                      </Box>
+                    )}
+
+                    {selectedAppointment.status === "confirmed" && (
+                      <Button
+                        variant="outlined"
+                        fullWidth
+                        startIcon={<Navigation sx={{ fontSize: 18 }} />}
+                        disabled={actionLoadingId === selectedAppointment.id}
+                        onClick={() => handleUpdateStatus(selectedAppointment.id, "en_route")}
+                        sx={{
+                          borderColor: "#2563EB",
+                          color: "#2563EB",
+                          fontWeight: 750,
+                          borderRadius: "10px",
+                          py: 0.9,
+                          textTransform: "none",
+                          "&:hover": { backgroundColor: "rgba(37, 99, 235, 0.04)", borderColor: "#1D4ED8" },
+                        }}
+                      >
+                        Mark Specialist En Route
+                      </Button>
+                    )}
+
+                    {selectedAppointment.status !== "cancelled" && selectedAppointment.status !== "completed" && (
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        fullWidth
+                        startIcon={<CancelOutlined sx={{ fontSize: 18 }} />}
+                        disabled={actionLoadingId === selectedAppointment.id}
+                        onClick={() => handleUpdateStatus(selectedAppointment.id, "cancelled", "Cancelled by operations dispatcher")}
+                        sx={{
+                          borderRadius: "10px",
+                          fontWeight: 700,
+                          py: 0.8,
+                          textTransform: "none",
+                        }}
+                      >
+                        Cancel Booking
+                      </Button>
+                    )}
+                  </Stack>
+                </Paper>
 
                 {/* Dispatch Note */}
                 <Box sx={{ p: 2, borderRadius: "14px", backgroundColor: "rgba(16, 185, 129, 0.05)", border: "1px solid rgba(16, 185, 129, 0.15)" }}>

@@ -329,6 +329,20 @@ export function getAppointments() {
   );
 }
 
+export function updateAppointmentStatus(appointmentId, status, notes = null, reason = null) {
+  return request(
+    `/appointments/${encodeURIComponent(appointmentId)}/status`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({
+        status,
+        notes,
+        reason,
+      }),
+    }
+  );
+}
+
 
 // ============================================================
 // TECHNICIANS
